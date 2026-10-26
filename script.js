@@ -1,123 +1,283 @@
-(() => {
-  'use strict';
-  document.getElementById('year').textContent = new Date().getFullYear();
-  const menu = document.querySelector('.menu-toggle');
-  const links = document.querySelector('.nav-links');
-  menu.addEventListener('click', () => {
-    const opened = menu.getAttribute('aria-expanded') !== 'true';
-    menu.setAttribute('aria-expanded', String(opened));
-    menu.setAttribute('aria-label', opened ? 'Fechar menu' : 'Abrir menu');
-    links.classList.toggle('open', opened);
-  });
-  document.querySelectorAll('.nav-links a').forEach(a => a.addEventListener('click', () => {
-    links.classList.remove('open'); menu.setAttribute('aria-expanded', 'false'); menu.setAttribute('aria-label', 'Abrir menu');
-  }));
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-      if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
-    }), {threshold:.09,rootMargin:'0px 0px 35px 0px'});
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-  } else document.querySelectorAll('.reveal').forEach(el=>el.classList.add('visible'));
+/* EDEN — microinteractions, scroll storytelling and accessible dialogs. No dependencies. */
+'use strict';
+document.documentElement.classList.add('js');
 
-  const services = {
-    contabilidade: {tag:'01 / CONTABILIDADE',title:'Contabilidade que gera clareza.',desc:'A contabilidade não precisa ser apenas uma obrigação. Quando organizada, ela se torna uma fonte confiável para entender a saúde e a evolução da empresa.',items:['Escrituração e organização das informações contábeis','Acompanhamento de obrigações e rotinas fiscais','Relatórios que dão contexto aos resultados do negócio']},
-    bpo: {tag:'02 / BPO FINANCEIRO',title:'Sua operação financeira, organizada.',desc:'Da rotina de pagamentos à visão de caixa, o BPO ajuda a criar disciplina e previsibilidade para quem precisa manter a operação em movimento.',items:['Gestão de contas a pagar e a receber','Conciliações e padronização de processos','Acompanhamento do fluxo de caixa e rotinas financeiras']},
-    estrategia: {tag:'03 / GESTÃO ESTRATÉGICA',title:'Decisões com visão de futuro.',desc:'Com dados e processos consistentes, a gestão estratégica conecta o financeiro às escolhas que determinam o crescimento do negócio.',items:['Análise de indicadores e desempenho financeiro','Projeções e cenários para planejamento','Apoio na avaliação de investimentos e expansão']}
-  };
-  const dialogs = [...document.querySelectorAll('dialog')];
-  const serviceDialog = document.getElementById('serviceDialog');
-  const contactDialog = document.getElementById('contactDialog');
-  const quizDialog = document.getElementById('quizDialog');
-  function openDialog(dialog) { dialogs.forEach(d=>{if(d.open)d.close();}); dialog.showModal(); }
-  document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
-  dialogs.forEach(d => d.addEventListener('click', ev=>{ if(ev.target === d) d.close(); }));
-  document.querySelectorAll('[data-open-contact]').forEach(button => button.addEventListener('click', () => openDialog(contactDialog)));
-  document.querySelectorAll('[data-service]').forEach(button => button.addEventListener('click', () => {
-    const s = services[button.dataset.service];
-    document.getElementById('serviceDialogEyebrow').textContent = s.tag;
-    document.getElementById('serviceDialogTitle').textContent = s.title;
-    document.getElementById('serviceDialogDesc').textContent = s.desc;
-    document.getElementById('serviceDialogBullets').replaceChildren(...s.items.map(txt=>{const li=document.createElement('li');li.textContent=txt;return li;}));
-    openDialog(serviceDialog);
-  }));
+const $ = (selector, scope = document) => scope.querySelector(selector);
+const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const stageData = [
-    {name:'Sobrevivência.',desc:'A prioridade é pagar as contas e manter a operação funcionando. Os controles ainda são simples e muitas decisões passam pelo dono.'},
-    {name:'Segurança.',desc:'As rotinas financeiras começam a ganhar organização. A empresa reduz surpresas, acompanha o caixa e estabelece processos mais confiáveis.'},
-    {name:'Controle.',desc:'Receitas, despesas e custos ganham visibilidade. A empresa passa a entender melhor seus resultados e sua situação financeira.'},
-    {name:'Desempenho.',desc:'Indicadores, rentabilidade e eficiência entram na rotina. O financeiro deixa de apenas registrar e começa a orientar melhorias.'},
-    {name:'Estratégia.',desc:'O financeiro participa das decisões do negócio. Indicadores e projeções orientam investimentos, expansão e criação de valor.'}
-  ];
-  function setStage(index) {
-    const st = stageData[index], detail=document.getElementById('stageDetail');
-    document.querySelectorAll('[data-stage]').forEach(btn => {
-      const active = Number(btn.dataset.stage)===index;
-      btn.classList.toggle('active',active);btn.setAttribute('aria-pressed',String(active));
-    });
-    detail.innerHTML=`<div class="stage-detail-label">ESTÁGIO ${String(index+1).padStart(2,'0')} / 05</div><div class="stage-detail-body"><div><h3>${st.name}</h3><p>${st.desc}</p></div><div class="stage-visual" aria-hidden="true"><div class="stage-visual-inner"><span class="stage-visual-caption">MATURIDADE FINANCEIRA</span><strong>${String(index+1).padStart(2,'0')}<span>/05</span></strong><div class="stage-meter">${Array.from({length:5},(_,i)=>`<i ${i<=index?'class="filled"':''}></i>`).join('')}</div></div></div></div>`;
+$('#currentYear').textContent = new Date().getFullYear();
+
+// Scroll-controlled progress and depth in the cinematic section.
+const header = $('.site-header');
+const progress = $('.scroll-progress');
+const scene = $('.vision-scene');
+let framePending = false;
+function paintScroll() {
+  const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  progress.style.transform = `scaleX(${Math.min(1, Math.max(0, scrollY / maxScroll))})`;
+  header.classList.toggle('scrolled', scrollY > 18);
+  if (!reducedMotion && scene) {
+    const bounds = scene.getBoundingClientRect();
+    const total = Math.max(1, bounds.height - innerHeight);
+    const value = Math.max(0, Math.min(1, -bounds.top / total));
+    scene.style.setProperty('--scene', value.toFixed(3));
   }
-  document.querySelectorAll('[data-stage]').forEach(btn=>btn.addEventListener('click',()=>setStage(Number(btn.dataset.stage))));
-  setStage(4);
+  framePending = false;
+}
+window.addEventListener('scroll', () => {
+  if (!framePending) { framePending = true; requestAnimationFrame(paintScroll); }
+}, { passive: true });
+window.addEventListener('resize', paintScroll, { passive: true });
+paintScroll();
 
-  const quiz=[
-    {q:'Como são feitos os controles financeiros?',opts:['Acompanhamos principalmente o saldo e os pagamentos.','Temos rotinas básicas, mas ainda pouco padronizadas.','Usamos processos e relatórios frequentes.','Acompanhamos indicadores e objetivos de negócio.']},
-    {q:'Qual é a previsibilidade do fluxo de caixa?',opts:['Não temos uma projeção confiável.','Projetamos apenas os próximos dias ou semanas.','Mantemos projeções mensais e revisamos os desvios.','Trabalhamos com cenários de médio e longo prazo.']},
-    {q:'Como sua empresa acompanha a rentabilidade?',opts:['Ainda não sabemos a margem real do negócio.','Analisamos o resultado de forma pontual.','Conhecemos custos, margens e principais indicadores.','Usamos análises de rentabilidade para direcionar decisões.']},
-    {q:'Qual é o papel do financeiro nas decisões?',opts:['Quase tudo é decidido sem análises financeiras.','O financeiro ajuda quando aparece algum problema.','Os números orientam decisões operacionais frequentes.','O financeiro participa do planejamento estratégico.']}
-  ];
-  let step=0;let answers=[null,null,null,null];
-  const quizContent=document.getElementById('quizContent');
-  const initialQuizMarkup=quizContent.innerHTML;
-  function renderQuiz(){
-    quizContent.innerHTML=initialQuizMarkup;
-    document.getElementById('quizCount').textContent=`QUESTÃO ${step+1} DE ${quiz.length}`;
-    document.getElementById('quizProgress').style.width=`${((step+1)/quiz.length)*100}%`;
-    document.getElementById('quizQuestion').textContent=quiz[step].q;
-    const options=document.getElementById('quizOptions');
-    quiz[step].opts.forEach((value,index)=>{
-      const btn=document.createElement('button');btn.type='button';btn.className='quiz-option';btn.textContent=value;
-      btn.setAttribute('aria-pressed',String(answers[step]===index));
-      btn.addEventListener('click',()=>{answers[step]=index;options.querySelectorAll('button').forEach((other,i)=>other.setAttribute('aria-pressed',String(i===index)));document.getElementById('quizNext').disabled=false;});
-      options.appendChild(btn);
-    });
-    document.getElementById('quizBack').style.visibility=step===0?'hidden':'visible';
-    document.getElementById('quizNext').disabled=answers[step]===null;
-    document.getElementById('quizNext').innerHTML=step===quiz.length-1?'Ver resultado →':'Continuar →';
-    document.getElementById('quizBack').addEventListener('click',()=>{step--;renderQuiz();});
-    document.getElementById('quizNext').addEventListener('click',()=>{if(answers[step]===null)return;if(step<quiz.length-1){step++;renderQuiz();}else showResult();});
-  }
-  function showResult(){
-    const avg=answers.reduce((a,b)=>a+b,0)/quiz.length;
-    // A pontuação é uma aproximação orientativa, não uma avaliação profissional.
-    const level=Math.max(0,Math.min(4,Math.round(avg*4/3)));
-    const s=stageData[level];
-    quizContent.innerHTML=`<h2 id="quizTitle">Seu estágio estimado: ${s.name}</h2><p>Uma primeira leitura de onde está sua estrutura financeira hoje.</p><div class="quiz-result-number">${String(level+1).padStart(2,'0')}<span>/05</span></div><div class="stage-meter">${Array.from({length:5},(_,i)=>`<i ${i<=level?'class="filled"':''}></i>`).join('')}</div><p class="quiz-result-copy">${s.desc}</p><p class="quiz-result-copy"><strong>Importante:</strong> esta avaliação é simplificada e não substitui um diagnóstico realizado por profissionais.</p><div class="quiz-result-cta"><button type="button" class="button button-primary" id="quizContact">Solicitar uma análise ↗</button><button type="button" class="button button-outline" id="quizRepeat">Refazer avaliação</button></div>`;
-    document.getElementById('quizContact').addEventListener('click',()=>openDialog(contactDialog));
-    document.getElementById('quizRepeat').addEventListener('click',startQuiz);
-  }
-  function startQuiz(){step=0;answers=[null,null,null,null];renderQuiz();if(!quizDialog.open)openDialog(quizDialog);}
-  document.getElementById('openQuiz').addEventListener('click',startQuiz);
-  document.querySelectorAll('[data-open-quiz]').forEach(btn=>btn.addEventListener('click',startQuiz));
-
-  // Antes da publicação, configure abaixo um endpoint HTTPS (Formspree, API própria etc.).
-  // Vazio = formulário de demonstração, sem transmissão de dados.
-  const CONTACT_FORM_ENDPOINT='';
-  document.getElementById('contactForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const form=e.currentTarget,feedback=document.getElementById('formFeedback');
-    if(!form.reportValidity())return;
-    const values=Object.fromEntries(new FormData(form));
-    if(!CONTACT_FORM_ENDPOINT){
-      feedback.textContent='Campos validados. Este protótipo não envia dados. Configure o endpoint de contato antes de publicar.';
-      return;
+// Content entrances reveal only on approach, avoiding above-the-fold delay.
+if ('IntersectionObserver' in window && !reducedMotion) {
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-visible');
+        observer.unobserve(entry.target);
+      }
     }
-    const submit=form.querySelector('[type="submit"]');
-    submit.disabled=true;feedback.textContent='Enviando...';
-    try{
-      const response=await fetch(CONTACT_FORM_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(values)});
-      if(!response.ok)throw new Error('Falha no envio');
-      feedback.textContent='Solicitação enviada. Entraremos em contato.';form.reset();
-    }catch(err){feedback.textContent='Não foi possível enviar sua solicitação. Tente novamente mais tarde.';}
-    finally{submit.disabled=false;}
+  }, { rootMargin: '0px 0px -60px 0px', threshold: 0.06 });
+  $$('.reveal').forEach(el => observer.observe(el));
+} else { $$('.reveal').forEach(el => el.classList.add('is-visible')); }
+
+// Mobile navigation.
+const menuButton = $('.mobile-menu-button');
+const navMiddle = $('#navMiddle');
+function closeMenu() {
+  menuButton.setAttribute('aria-expanded', 'false');
+  menuButton.setAttribute('aria-label', 'Abrir menu');
+  navMiddle.classList.remove('is-open');
+}
+menuButton.addEventListener('click', () => {
+  const isExpanded = menuButton.getAttribute('aria-expanded') === 'true';
+  menuButton.setAttribute('aria-expanded', String(!isExpanded));
+  menuButton.setAttribute('aria-label', isExpanded ? 'Abrir menu' : 'Fechar menu');
+  navMiddle.classList.toggle('is-open', !isExpanded);
+});
+$$('.nav-middle a').forEach(link => link.addEventListener('click', closeMenu));
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+
+// Accessible native dialogs: Escape/backdrop support and body scroll lock.
+const serviceModal = $('#serviceModal');
+const quizModal = $('#quizModal');
+const contactModal = $('#contactModal');
+const dialogs = [serviceModal, quizModal, contactModal];
+let restoringFocus = null;
+function openModal(dialog) {
+  dialogs.forEach(item => { if (item.open) item.close(); });
+  restoringFocus = document.activeElement;
+  dialog.showModal();
+  document.body.classList.add('dialog-open');
+}
+function closeModal(dialog) { if (dialog.open) dialog.close(); }
+for (const dialog of dialogs) {
+  $$('[data-close-modal]', dialog).forEach(button => button.addEventListener('click', () => closeModal(dialog)));
+  dialog.addEventListener('click', event => { if (event.target === dialog) closeModal(dialog); });
+  dialog.addEventListener('close', () => {
+    if (!dialogs.some(d => d.open)) document.body.classList.remove('dialog-open');
+    if (restoringFocus?.isConnected) restoringFocus.focus({ preventScroll: true });
   });
-})();
+}
+
+const serviceData = {
+  contabilidade: {
+    tag: '01 / CONTABILIDADE',
+    title: 'Uma base sólida para seguir em frente.',
+    description: 'A contabilidade organiza as informações e as obrigações necessárias para que a empresa tenha uma leitura confiável do seu histórico.',
+    features: ['Organização de registros e informações contábeis', 'Acompanhamento das obrigações aplicáveis', 'Base consistente para análises e planejamento']
+  },
+  bpo: {
+    tag: '02 / BPO FINANCEIRO',
+    title: 'Uma rotina financeira que trabalha a seu favor.',
+    description: 'A terceirização de processos financeiros ajuda a manter pagamentos, recebimentos, conciliações e fluxo de caixa sob controle.',
+    features: ['Contas a pagar e a receber', 'Conciliação e organização de rotinas', 'Acompanhamento do fluxo de caixa']
+  },
+  estrategia: {
+    tag: '03 / GESTÃO ESTRATÉGICA',
+    title: 'Do número à melhor decisão.',
+    description: 'Gestão estratégica transforma informações financeiras em análises úteis para avaliar resultados, cenários e prioridades.',
+    features: ['Construção e leitura de indicadores', 'Análise de desempenho e cenários', 'Apoio ao planejamento financeiro']
+  }
+};
+$$('[data-service]').forEach(button => button.addEventListener('click', () => {
+  const data = serviceData[button.dataset.service];
+  if (!data) return;
+  $('#serviceTag').textContent = data.tag;
+  $('#serviceTitle').textContent = data.title;
+  $('#serviceDescription').textContent = data.description;
+  const list = $('#serviceList');
+  list.replaceChildren(...data.features.map(str => {
+    const li = document.createElement('li'); li.textContent = str; return li;
+  }));
+  openModal(serviceModal);
+}));
+
+// Product preview. These are labels describing possible perspectives, not connected account data.
+const chartPaths = {
+  caixa: 'M0 205C82 186 129 212 198 176S299 160 354 174 460 112 518 127 617 86 686 95 784 65 844 74 927 32 960 21',
+  indicadores: 'M0 209C56 198 122 179 177 194S273 126 332 142 445 123 497 128 600 61 648 80 744 54 809 70 911 38 960 16',
+  planejamento: 'M0 222C68 210 108 205 177 196S307 188 375 164 484 154 534 129 648 107 706 82 822 60 875 43 932 25 960 8'
+};
+const views = {
+  caixa: {
+    kicker: 'VISÃO DO CAIXA', title: 'Saiba onde está.\nPlaneje onde quer chegar.',
+    desc: 'Acompanhe entradas, saídas e possibilidades com uma leitura simples e objetiva.',
+    metrics: [['Visibilidade', 'Dia a dia'], ['Perspectiva', 'Futuro'], ['Prioridade', 'Clareza']]
+  },
+  indicadores: {
+    kicker: 'INDICADORES', title: 'Decisões melhores.\nDados mais claros.',
+    desc: 'Transforme a rotina financeira em sinais úteis para avaliar o desempenho do negócio.',
+    metrics: [['Análise', 'Evolução'], ['Foco', 'Resultado'], ['Leitura', 'Simples']]
+  },
+  planejamento: {
+    kicker: 'PLANEJAMENTO', title: 'Enxergue cenários.\nEvolua com direção.',
+    desc: 'Antecipe decisões e organize prioridades com uma perspectiva de médio e longo prazo.',
+    metrics: [['Horizonte', 'Cenários'], ['Prioridade', 'Estratégia'], ['Direção', 'Futuro']]
+  }
+};
+const viewTabs = $$('.experience-tab');
+function selectView(name, focus = false) {
+  const data = views[name]; if (!data) return;
+  viewTabs.forEach(tab => {
+    const selected = tab.dataset.view === name;
+    tab.classList.toggle('active', selected);
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    if (selected) $('#tabPanel').setAttribute('aria-labelledby', tab.id);
+  });
+  if (focus) viewTabs.find(tab => tab.dataset.view === name).focus();
+  $('#productKicker').textContent = data.kicker;
+  $('#productTitle').textContent = data.title;
+  $('#productTitle').style.whiteSpace = 'pre-line';
+  $('#productDescription').textContent = data.desc;
+  data.metrics.forEach(([label, value], index) => {
+    $(`#stat${['One','Two','Three'][index]}Label`).textContent = label;
+    $(`#stat${['One','Two','Three'][index]}`).textContent = value;
+  });
+  $('#productLine').setAttribute('d', chartPaths[name]);
+  $('#productArea').setAttribute('d', `${chartPaths[name]}V250H0Z`);
+  const screen = $('.product-screen');
+  screen.classList.remove('is-switching');
+  void screen.offsetWidth;
+  if (!reducedMotion) screen.classList.add('is-switching');
+}
+viewTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectView(tab.dataset.view));
+  tab.addEventListener('keydown', event => {
+    let target = null;
+    if (event.key === 'ArrowRight') target = viewTabs[(index + 1) % viewTabs.length];
+    if (event.key === 'ArrowLeft') target = viewTabs[(index + viewTabs.length - 1) % viewTabs.length];
+    if (event.key === 'Home') target = viewTabs[0];
+    if (event.key === 'End') target = viewTabs[viewTabs.length - 1];
+    if (target) { event.preventDefault(); selectView(target.dataset.view, true); }
+  });
+});
+selectView('caixa');
+
+// Four-question educational assessment. No personal data is collected.
+const questions = [
+  { text: 'Como sua empresa registra as movimentações financeiras?', answers: ['Não existe um controle consistente.', 'Usamos planilhas ou registros manuais.', 'Temos uma rotina organizada.', 'Usamos indicadores e análises regularmente.'] },
+  { text: 'Com que frequência o fluxo de caixa é acompanhado?', answers: ['Não acompanhamos com regularidade.', 'Quando aparece uma necessidade.', 'Semanalmente ou em uma rotina definida.', 'Com projeções e revisão de cenários.'] },
+  { text: 'Como são tomadas as decisões financeiras importantes?', answers: ['Principalmente pela urgência.', 'Com base no saldo disponível.', 'Com relatórios e histórico financeiro.', 'Com indicadores, cenários e planejamento.'] },
+  { text: 'Qual é a situação dos processos financeiros?', answers: ['São pouco definidos.', 'Dependem bastante das pessoas.', 'São documentados e acompanhados.', 'São integrados à estratégia da empresa.'] }
+];
+const stages = [
+  { name: 'Sobrevivência', summary: 'O primeiro passo é criar visibilidade sobre entradas, saídas e compromissos.', steps: ['Registrar movimentações de forma consistente.', 'Separar o caixa da empresa do pessoal.', 'Estabelecer uma rotina de acompanhamento.'] },
+  { name: 'Segurança', summary: 'Já existem controles iniciais. Agora, é hora de dar previsibilidade à rotina.', steps: ['Padronizar processos financeiros.', 'Acompanhar contas a pagar e a receber.', 'Definir uma visão regular do fluxo de caixa.'] },
+  { name: 'Controle', summary: 'Você já construiu uma base para organizar decisões e ganhar eficiência.', steps: ['Usar indicadores financeiros relevantes.', 'Criar uma cadência de análise de resultados.', 'Acompanhar custos e oportunidades de melhoria.'] },
+  { name: 'Desempenho', summary: 'Seu próximo avanço pode estar na análise de cenários e no planejamento.', steps: ['Conectar indicadores a metas.', 'Analisar tendências com regularidade.', 'Criar cenários para decisões importantes.'] },
+  { name: 'Estratégia', summary: 'Sua empresa demonstra práticas mais maduras de gestão financeira.', steps: ['Revisar hipóteses e indicadores continuamente.', 'Integrar planejamento financeiro à estratégia.', 'Evoluir processos conforme o negócio cresce.'] }
+];
+let currentQuestion = 0;
+let answers = Array(questions.length).fill(null);
+function showQuestion() {
+  const q = questions[currentQuestion];
+  $('#quizCount').textContent = `PERGUNTA ${currentQuestion + 1} DE ${questions.length}`;
+  $('#quizProgress').style.width = `${(currentQuestion + 1) / questions.length * 100}%`;
+  $('#quizTitle').textContent = q.text;
+  $('#quizIntro').textContent = 'Selecione a opção que melhor descreve sua realidade.';
+  $('#quizOptions').replaceChildren(...q.answers.map((answer, i) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'quiz-choice';
+    button.setAttribute('aria-pressed', String(answers[currentQuestion] === i));
+    if (answers[currentQuestion] === i) button.classList.add('is-selected');
+    button.textContent = answer;
+    button.addEventListener('click', () => {
+      answers[currentQuestion] = i;
+      $$('.quiz-choice').forEach((el, j) => {
+        el.classList.toggle('is-selected', j === i);
+        el.setAttribute('aria-pressed', String(j === i));
+      });
+      $('#quizNext').disabled = false;
+    });
+    return button;
+  }));
+  $('#quizPrevious').hidden = currentQuestion === 0;
+  $('#quizNext').disabled = answers[currentQuestion] === null;
+  $('#quizNext').textContent = currentQuestion === questions.length - 1 ? 'Ver resultado →' : 'Continuar →';
+}
+function showResult() {
+  const score = answers.reduce((sum, answer) => sum + (answer ?? 0), 0);
+  const stageIndex = score <= 2 ? 0 : score <= 5 ? 1 : score <= 7 ? 2 : score <= 10 ? 3 : 4;
+  const stage = stages[stageIndex];
+  const area = $('#quizBody');
+  area.replaceChildren();
+  const scoreLabel = document.createElement('p'); scoreLabel.className = 'quiz-result-score'; scoreLabel.textContent = `ESTÁGIO ${stageIndex + 1} DE 5`;
+  const heading = document.createElement('h2'); heading.id = 'quizTitle'; heading.textContent = stage.name;
+  const desc = document.createElement('p'); desc.textContent = stage.summary;
+  const list = document.createElement('ul'); list.className = 'quiz-result-list';
+  stage.steps.forEach(str => { const li = document.createElement('li'); li.textContent = `↗  ${str}`; list.append(li); });
+  const note = document.createElement('p'); note.className = 'form-legal'; note.textContent = 'Resultado orientativo baseado nas suas respostas, não é um diagnóstico profissional.';
+  const again = document.createElement('button'); again.type = 'button'; again.className = 'pill-button pill-dark'; again.textContent = 'Refazer avaliação ↗';
+  again.addEventListener('click', startQuiz);
+  area.append(scoreLabel, heading, desc, list, again, note);
+}
+const initialQuizMarkup = $('#quizBody').innerHTML;
+function startQuiz() {
+  if (!$('#quizNext')) $('#quizBody').innerHTML = initialQuizMarkup;
+  answers = Array(questions.length).fill(null);
+  currentQuestion = 0;
+  $('#quizPrevious').onclick = () => { currentQuestion = Math.max(0, currentQuestion - 1); showQuestion(); };
+  $('#quizNext').onclick = () => {
+    if (answers[currentQuestion] === null) return;
+    if (currentQuestion < questions.length - 1) { currentQuestion++; showQuestion(); }
+    else showResult();
+  };
+  showQuestion();
+}
+$$('[data-open-quiz]').forEach(button => button.addEventListener('click', () => { startQuiz(); openModal(quizModal); }));
+
+// Contact demo: honest form behaviour without server-side integration.
+$$('[data-open-contact]').forEach(button => button.addEventListener('click', () => { openModal(contactModal); }));
+$('#contactForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+  const values = new FormData(form);
+  const message = [
+    'Solicitação de contato — EDEN',
+    `Nome: ${values.get('nome')}`,
+    `E-mail: ${values.get('email')}`,
+    `Empresa: ${values.get('empresa')}`,
+    `Interesse: ${values.get('servico')}`,
+    `Mensagem: ${values.get('mensagem') || '(não informada)'}`
+  ].join('\n');
+  const status = $('#formResult');
+  status.replaceChildren();
+  let copied = false;
+  try {
+    if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(message); copied = true; }
+  } catch { copied = false; }
+  status.textContent = copied
+    ? 'Solicitação copiada. O formulário ainda não realiza envios; cole a mensagem no canal de contato da EDEN.'
+    : 'Solicitação preparada abaixo. Copie a mensagem manualmente; o formulário ainda não realiza envios.';
+  if (!copied) {
+    const text = document.createElement('textarea'); text.rows = 6; text.readOnly = true; text.value = message;
+    text.style.width = '100%'; text.style.marginTop = '12px'; text.style.padding = '12px'; text.style.border = '1px solid #ccd4e1'; text.style.borderRadius = '9px';
+    status.append(text); text.focus(); text.select();
+  }
+});

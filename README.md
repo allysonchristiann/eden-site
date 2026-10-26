@@ -1,32 +1,44 @@
-# EDEN Soluções Financeiras — site institucional
+# EDEN — Site institucional v2
 
-Protótipo responsivo inspirado na linguagem visual e nos padrões de navegação e apresentação de produtos da Apple. Identidade, gráficos e ilustrações originais da EDEN. Conteúdo institucional reescrito a partir dos temas publicados pelo Laboratório de Finanças (https://labfinancas.com.br/).
+Site estático original para a EDEN, com referência de linguagem visual minimalista, apresentações de produto, movimento sutil e tipografia editorial. Serviços: contabilidade, BPO financeiro e gestão estratégica. Textos próprios, baseados nos temas do Laboratório de Finanças; não foram reproduzidos seus depoimentos, resultados nem dados de contato.
 
-## Executar
+## Arquivos
 
-Abra `index.html` no navegador. Opcionalmente, sirva localmente com:
+- `index.html` — página e metadados para `https://edenfin.com.br`.
+- `styles.css` — visual responsivo, cenas e animações.
+- `script.js` — interações, aba demonstrativa, FAQ e avaliação de quatro perguntas.
+- `favicon.svg` — ícone original da EDEN.
+- `CNAME` — configuração do domínio personalizado do GitHub Pages. **Não exclua este arquivo.**
 
-```bash
-python3 -m http.server 8000
+## Atualizar o site GitHub Pages pelo PowerShell
+
+Execute no **Windows PowerShell** onde você tem o repositório original:
+
+```powershell
+cd "$HOME\acme-publicacao\acme-site"
+git pull --rebase origin main
+Expand-Archive -Path "$HOME\Downloads\eden-site-v2.zip" -DestinationPath "$HOME\acme-publicacao\acme-site" -Force
+git add index.html styles.css script.js favicon.svg CNAME README.md
+git commit -m "Redesign premium do site EDEN"
+git push origin main
 ```
 
-Depois, acesse `http://localhost:8000`.
+Confirme que o ZIP foi baixado para Downloads. Não extraia dentro de uma subpasta extra. Se a pasta foi movida, altere o caminho dos comandos.
 
-## Funcionalidades
+## Preview local
 
-- Layout responsivo desktop e mobile, menu adaptativo e animações de entrada.
-- Modal com informações das três soluções.
-- Seletor interativo dos cinco níveis de maturidade financeira.
-- Questionário interativo de quatro perguntas, com estágio orientativo.
-- Formulário de contato com validação HTML5.
-- Respeita `prefers-reduced-motion`, navegação por teclado e fechamento de modais com Esc.
+```powershell
+cd "$HOME\acme-publicacao\acme-site"
+Start-Process .\index.html
+```
 
-## Antes de publicar
+## Atenção antes de uso comercial
 
-1. **Formulário de contato:** configurar `CONTACT_FORM_ENDPOINT` no arquivo `script.js` com um endpoint HTTPS real (API própria, Formspree etc.). Na ausência dele, o formulário informa explicitamente que os dados não são enviados. Conferir requisitos de CORS, autenticação, antispam e tratamento de dados pessoais.
-2. **Identidade e conteúdo:** revisar nome, textos e serviços para assegurar que são realmente prestados pela EDEN. Não foram utilizados nomes, depoimentos nem números de experiência de clientes do Laboratório de Finanças.
-3. **Informações empresariais:** inserir contatos oficiais, CNPJ, política de privacidade e outros dados regulatórios aplicáveis, após confirmação.
-4. **Infraestrutura:** hospedar via HTTPS (Netlify, Vercel, Cloudflare Pages ou servidor web de sua escolha).
-5. **SEO:** conferir metatags, domínio canônico e política de cookies caso sejam ativadas ferramentas de análise.
+- A página não contém sistema real de dashboard: painéis, números, gráficos e cenários são ilustrações.
+- A avaliação de maturidade tem caráter orientativo, não constitui aconselhamento profissional.
+- O formulário **não envia os dados**. Ele prepara uma mensagem para cópia. Antes de ativar contatos reais, configure um destino de recebimento (ex.: endpoint seguro, anti-spam e consentimento LGPD) e informe um e-mail oficial da empresa.
+- Revise os serviços reais prestados, dados de contato, termos, eventual inscrição profissional/empresa e política de privacidade.
+- O domínio customizado depende de DNS no Registro.br. Mantenha `CNAME` com `edenfin.com.br`, e configure HTTPS no GitHub Pages quando possível.
+- O site não depende de bibliotecas, serviços externos ou fontes remotas.
 
-A interface do painel apresenta **dados fictícios** e não se conecta a contas financeiras.
+Para desabilitar animações, use o sistema operacional com **Reduzir movimento** ativado; o site respeita `prefers-reduced-motion`.
