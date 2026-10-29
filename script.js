@@ -1,4 +1,4 @@
-/* EDEN — microinteractions, scroll storytelling and accessible dialogs. No dependencies. */
+
 'use strict';
 document.documentElement.classList.add('js');
 
@@ -8,7 +8,6 @@ const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matc
 
 $('#currentYear').textContent = new Date().getFullYear();
 
-// Scroll-controlled progress and depth in the cinematic section.
 const header = $('.site-header');
 const progress = $('.scroll-progress');
 const scene = $('.vision-scene');
@@ -31,7 +30,6 @@ window.addEventListener('scroll', () => {
 window.addEventListener('resize', paintScroll, { passive: true });
 paintScroll();
 
-// Content entrances reveal only on approach, avoiding above-the-fold delay.
 if ('IntersectionObserver' in window && !reducedMotion) {
   const observer = new IntersectionObserver(entries => {
     for (const entry of entries) {
@@ -44,7 +42,6 @@ if ('IntersectionObserver' in window && !reducedMotion) {
   $$('.reveal').forEach(el => observer.observe(el));
 } else { $$('.reveal').forEach(el => el.classList.add('is-visible')); }
 
-// Mobile navigation.
 const menuButton = $('.mobile-menu-button');
 const navMiddle = $('#navMiddle');
 function closeMenu() {
@@ -61,7 +58,6 @@ menuButton.addEventListener('click', () => {
 $$('.nav-middle a').forEach(link => link.addEventListener('click', closeMenu));
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
 
-// Accessible native dialogs: Escape/backdrop support and body scroll lock.
 const quizModal = $('#quizModal');
 const contactModal = $('#contactModal');
 const dialogs = [quizModal, contactModal];
@@ -82,7 +78,6 @@ for (const dialog of dialogs) {
   });
 }
 
-// Product preview. These are labels describing possible perspectives, not connected account data.
 const chartPaths = {
   caixa: 'M0 205C82 186 129 212 198 176S299 160 354 174 460 112 518 127 617 86 686 95 784 65 844 74 927 32 960 21',
   indicadores: 'M0 209C56 198 122 179 177 194S273 126 332 142 445 123 497 128 600 61 648 80 744 54 809 70 911 38 960 16',
@@ -144,7 +139,6 @@ viewTabs.forEach((tab, index) => {
 });
 selectView('caixa');
 
-// Four-question educational assessment. No personal data is collected.
 const questions = [
   { text: 'Como sua empresa registra as movimentações financeiras?', answers: ['Não existe um controle consistente.', 'Usamos planilhas ou registros manuais.', 'Temos uma rotina organizada.', 'Usamos indicadores e análises regularmente.'] },
   { text: 'Com que frequência o fluxo de caixa é acompanhado?', answers: ['Não acompanhamos com regularidade.', 'Quando aparece uma necessidade.', 'Semanalmente ou em uma rotina definida.', 'Com projeções e revisão de cenários.'] },
@@ -217,7 +211,6 @@ function startQuiz() {
 }
 $$('[data-open-quiz]').forEach(button => button.addEventListener('click', () => { startQuiz(); openModal(quizModal); }));
 
-// Contact demo: honest form behaviour without server-side integration.
 $$('[data-open-contact]').forEach(button => button.addEventListener('click', () => {
   const service = button.dataset.contactService;
   if (service) $('#contactForm select[name="servico"]').value = service;
@@ -252,8 +245,6 @@ $('#contactForm').addEventListener('submit', async event => {
   }
 });
 
-
-/* EDEN_RESET_31 */
 if (performance.getEntriesByType('navigation')[0]?.type === 'reload') {
     const resetEden = () => {
         document.querySelectorAll('details').forEach(el => {
