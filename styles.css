@@ -445,3 +445,50 @@ body {
   .service-details li { animation: none; }
   .service-details::details-content { transition: none; }
 }
+
+/* EDEN 4.1 - Header e CTA */
+.site-header .eden-symbol {
+  display: none !important;
+}
+
+.site-header .wordmark {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #f5f7ff !important;
+}
+
+.eden-symbol {
+  background: #f3f7ff !important;
+  color: #0b1220 !important;
+  border: 1px solid #d8e4ff !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.18);
+  opacity: 1 !important;
+}
+
+.nav-cta {
+  min-width: 220px;
+  justify-content: center;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg,#3b82f6,#2563eb) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 10px 30px rgba(37,99,235,.28);
+}
+
+.nav-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 34px rgba(37,99,235,.34);
+}
+
+@media (max-width: 830px) {
+  .site-header .wordmark {
+    font-size: 1.8rem;
+  }
+
+  .nav-cta {
+    min-width: auto;
+    width: 100%;
+  }
+}
