@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1019">
+<meta name="description" content="Converse com a EDEN sobre soluções financeiras para sua empresa.">
+<title>Contato | EDEN</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root {
+  color-scheme:dark;
+  --bg:#0b1019;
+  --panel:#152034;
+  --line:#34445f;
+  --fg:#f3f6ff;
+  --muted:#afbdd3;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body {
+  margin:0;
+  background:radial-gradient(ellipse at 15% 10%,#1d3b6c66,transparent 44%),var(--bg);
+  color:var(--fg);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+a:focus-visible,button:focus-visible,input:focus-visible,
+textarea:focus-visible,select:focus-visible {
+  outline:3px solid #8bb9ff;
+  outline-offset:3px;
+}
+header {
+  border-bottom:1px solid #ffffff19;
+  background:#0b1019df;
+  backdrop-filter:blur(18px);
+  position:sticky;
+  top:0;
+  z-index:5;
+}
+.bar {
+  max-width:1160px;
+  margin:auto;
+  min-height:72px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:0 28px;
+}
+.brand{font-size:25px;font-weight:800;letter-spacing:-.05em}
+.back {
+  font-size:13px;
+  color:#c4d4ec;
+  border:1px solid #3c4d6a;
+  padding:12px 18px;
+  border-radius:30px;
+  transition:background .25s;
+}
+.back:hover{background:#243550}
+main{max-width:1160px;margin:auto;padding:75px 28px 95px}
+.layout{display:grid;grid-template-columns:.9fr 1.1fr;gap:70px;align-items:start}
+.tag {
+  font-size:12px;
+  letter-spacing:.18em;
+  font-weight:750;
+  color:#85affc;
+  margin-bottom:20px;
+}
+.intro h1 {
+  font-size:clamp(49px,5.6vw,82px);
+  line-height:1.04;
+  letter-spacing:-.065em;
+  margin:0 0 25px;
+}
+.intro h1 span{color:#77a7ff}
+.intro>p {
+  color:var(--muted);
+  font-size:17px;
+  line-height:1.68;
+  max-width:430px;
+  margin-bottom:45px;
+}
+.benefits{border-top:1px solid #344157;padding-top:20px}
+.benefits p {
+  display:flex;
+  align-items:flex-start;
+  gap:15px;
+  color:#cfdbeb;
+  font-size:14px;
+  line-height:1.5;
+  margin:17px 0;
+}
+.benefits b{color:#76a8ff}
+.form-card {
+  padding:38px;
+  background:linear-gradient(145deg,#1a2841,#111b2d);
+  border:1px solid var(--line);
+  border-radius:27px;
+  box-shadow:0 30px 70px #0004;
+  animation:rise .75s cubic-bezier(.16,1,.3,1) both;
+}
+.form-card h2 {
+  font-size:29px;
+  letter-spacing:-.045em;
+  margin:0 0 9px;
+}
+.form-card>p {
+  font-size:14px;
+  color:var(--muted);
+  line-height:1.55;
+  margin:0 0 27px;
+}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+label {
+  display:block;
+  font-size:12px;
+  font-weight:650;
+  color:#cbd7ea;
+  margin-bottom:19px;
+}
+input,textarea,select {
+  display:block;
+  width:100%;
+  margin-top:8px;
+  padding:14px 15px;
+  background:#0d1728;
+  border:1px solid #3c4c67;
+  color:#f4f7ff;
+  border-radius:11px;
+  outline:0;
+  transition:border-color .2s,box-shadow .2s;
+}
+input:focus,textarea:focus,select:focus {
+  border-color:#81adff;
+  box-shadow:0 0 0 3px #3076ed23;
+}
+input::placeholder,textarea::placeholder{color:#8595af}
+textarea{min-height:110px;resize:vertical}
+option{background:#0d1728}
+.evaluation {
+  display:none;
+  background:#203250;
+  border:1px solid #41628f;
+  border-radius:14px;
+  padding:20px;
+  margin:4px 0 22px;
+}
+.evaluation.show{display:block}
+.evaluation strong{display:block;margin-bottom:8px;font-size:15px}
+.evaluation p{font-size:13px;color:#b7c9e6;margin:0 0 12px}
+.evaluation ol {
+  padding-left:19px;
+  color:#d1def1;
+  font-size:12px;
+  line-height:1.65;
+  margin:0;
+}
+.evaluation li{margin-top:10px}
+.evaluation li span{display:block;color:#8fb6f5}
+.consent {
+  display:flex;
+  align-items:start;
+  gap:10px;
+  font-weight:400;
+  font-size:12px;
+  color:#b9c7de;
+  line-height:1.5;
+  margin:6px 0 23px;
+}
+.consent input {
+  width:16px;
+  height:16px;
+  flex:none;
+  margin:1px 0 0;
+  accent-color:#3985ed;
+}
+.submit {
+  width:100%;
+  border:0;
+  border-radius:999px;
+  background:linear-gradient(110deg,#2868db,#478efa);
+  color:#fff;
+  font-weight:750;
+  padding:16px 24px;
+  transition:transform .25s,filter .25s,box-shadow .25s;
+  box-shadow:0 12px 26px #1355ae44;
+}
+.submit:hover {
+  transform:translateY(-2px);
+  filter:brightness(1.1);
+  box-shadow:0 17px 38px #1355ae66;
+}
+.hint {
+  font-size:11px!important;
+  color:#9daeca!important;
+  line-height:1.6!important;
+  margin:16px 0 0!important;
+}
+.result {
+  margin-top:20px;
+  border-radius:12px;
+  padding:16px;
+  background:#152d45;
+  display:none;
+  font-size:13px;
+  line-height:1.6;
+}
+.result.show{display:block}
+.result textarea{font-size:12px;min-height:190px}
+.result button {
+  margin-top:10px;
+  border:1px solid #5983c7;
+  border-radius:10px;
+  padding:10px 16px;
+  background:#26446e;
+  color:white;
+}
+footer {
+  padding:25px 28px;
+  border-top:1px solid #2f4058;
+  text-align:center;
+  color:#8296b3;
+  font-size:12px;
+}
+@keyframes rise {
+  from{opacity:0;transform:translateY(24px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@media(max-width:850px) {
+  main{padding-top:52px}
+  .layout{grid-template-columns:1fr;gap:38px}
+  .intro h1{max-width:650px}
+  .intro>p{margin-bottom:24px}
+}
+@media(max-width:550px) {
+  .bar{padding:0 20px}
+  .back{font-size:11px;padding:10px 12px}
+  main{padding:44px 18px 65px}
+  .form-card{padding:25px 19px;border-radius:22px}
+  .row{grid-template-columns:1fr;gap:0}
+  .intro h1{font-size:49px}
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+<script defer src="contato.js?v=5.0"></script>
+</head>
+<body>
+<header>
+  <nav class="bar" aria-label="Navegação">
+    <a class="brand" href="index.html" aria-label="EDEN, voltar ao início">EDEN</a>
+    <a class="back" href="index.html">← Voltar ao site</a>
+  </nav>
+</header>
+<main>
+  <div class="layout">
+    <section class="intro" aria-labelledby="titulo">
+      <div class="tag">CONTATO · EDEN</div>
+      <h1 id="titulo">O próximo passo <span>começa aqui.</span></h1>
+      <p>Conte sobre o momento da sua empresa. Vamos entender suas prioridades e encontrar o melhor caminho para evoluir sua gestão financeira.</p>
+      <div class="benefits">
+        <p><b>01</b> Atendimento orientado à sua realidade.</p>
+        <p><b>02</b> Soluções para diferentes estágios financeiros.</p>
+        <p><b>03</b> Uma conversa clara, sem complicação.</p>
+      </div>
+    </section>
+    <section class="form-card" aria-labelledby="formTitulo">
+      <h2 id="formTitulo">Fale com a EDEN</h2>
+      <p>Preencha seus dados e conte um pouco do que sua empresa precisa.</p>
+      <div id="avaliacaoResumo" class="evaluation" aria-live="polite">
+        <strong>Avaliação financeira incluída</strong>
+        <p id="etapaResumo"></p>
+        <ol id="respostasResumo"></ol>
+      </div>
+      <form id="leadForm">
+        <div class="row">
+          <label>Seu nome
+            <input name="nome" autocomplete="name" required maxlength="100" placeholder="Como podemos chamar você?">
+          </label>
+          <label>E-mail profissional
+            <input name="email" type="email" autocomplete="email" required maxlength="160" placeholder="voce@empresa.com.br">
+          </label>
+        </div>
+        <div class="row">
+          <label>Empresa
+            <input name="empresa" required maxlength="130" placeholder="Nome da empresa">
+          </label>
+          <label>Telefone (opcional)
+            <input name="telefone" type="tel" autocomplete="tel" maxlength="25" placeholder="(11) 99999-9999">
+          </label>
+        </div>
+        <label>Solução de interesse
+          <select name="servico" required>
+            <option value="">Selecione uma solução</option>
+            <option>BPO Financeiro</option>
+            <option>Fluxo de Caixa e Tesouraria</option>
+            <option>Planejamento Financeiro e Budget</option>
+            <option>Controladoria e Indicadores</option>
+            <option>Contas a Receber e Cobrança</option>
+            <option>Faturamento e Apoio Fiscal</option>
+            <option>Relatórios Financeiros</option>
+            <option>Quero orientação para escolher</option>
+          </select>
+        </label>
+        <label>Mensagem (opcional)
+          <textarea name="mensagem" maxlength="3000" placeholder="Conte sobre suas prioridades e desafios..."></textarea>
+        </label>
+        <input type="hidden" name="avaliacao" id="avaliacaoHidden">
+        <label class="consent">
+          <input type="checkbox" required name="consentimento">
+          Autorizo o uso dos meus dados para resposta a esta solicitação, quando o canal de envio for ativado.
+        </label>
+        <button class="submit" type="submit">Preparar solicitação ↗</button>
+        <p class="hint">O envio por e-mail ainda não está ativo. Por enquanto, este botão apenas prepara os dados para cópia, sem enviá-los à EDEN.</p>
+        <div id="formResult" class="result" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+  </div>
+</main>
+<footer>© <span id="year"></span> EDEN · Inteligência financeira · <a href="index.html">Voltar ao início</a></footer>
+</body>
+</html>
