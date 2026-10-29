@@ -62,10 +62,9 @@ $$('.nav-middle a').forEach(link => link.addEventListener('click', closeMenu));
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
 
 // Accessible native dialogs: Escape/backdrop support and body scroll lock.
-const serviceModal = $('#serviceModal');
 const quizModal = $('#quizModal');
 const contactModal = $('#contactModal');
-const dialogs = [serviceModal, quizModal, contactModal];
+const dialogs = [quizModal, contactModal];
 let restoringFocus = null;
 function openModal(dialog) {
   dialogs.forEach(item => { if (item.open) item.close(); });
@@ -82,39 +81,6 @@ for (const dialog of dialogs) {
     if (restoringFocus?.isConnected) restoringFocus.focus({ preventScroll: true });
   });
 }
-
-const serviceData = {
-  contabilidade: {
-    tag: '01 / CONTABILIDADE',
-    title: 'Uma base sólida para seguir em frente.',
-    description: 'A contabilidade organiza as informações e as obrigações necessárias para que a empresa tenha uma leitura confiável do seu histórico.',
-    features: ['Organização de registros e informações contábeis', 'Acompanhamento das obrigações aplicáveis', 'Base consistente para análises e planejamento']
-  },
-  bpo: {
-    tag: '02 / BPO FINANCEIRO',
-    title: 'Uma rotina financeira que trabalha a seu favor.',
-    description: 'A terceirização de processos financeiros ajuda a manter pagamentos, recebimentos, conciliações e fluxo de caixa sob controle.',
-    features: ['Contas a pagar e a receber', 'Conciliação e organização de rotinas', 'Acompanhamento do fluxo de caixa']
-  },
-  estrategia: {
-    tag: '03 / GESTÃO ESTRATÉGICA',
-    title: 'Do número à melhor decisão.',
-    description: 'Gestão estratégica transforma informações financeiras em análises úteis para avaliar resultados, cenários e prioridades.',
-    features: ['Construção e leitura de indicadores', 'Análise de desempenho e cenários', 'Apoio ao planejamento financeiro']
-  }
-};
-$$('[data-service]').forEach(button => button.addEventListener('click', () => {
-  const data = serviceData[button.dataset.service];
-  if (!data) return;
-  $('#serviceTag').textContent = data.tag;
-  $('#serviceTitle').textContent = data.title;
-  $('#serviceDescription').textContent = data.description;
-  const list = $('#serviceList');
-  list.replaceChildren(...data.features.map(str => {
-    const li = document.createElement('li'); li.textContent = str; return li;
-  }));
-  openModal(serviceModal);
-}));
 
 // Product preview. These are labels describing possible perspectives, not connected account data.
 const chartPaths = {
@@ -252,7 +218,11 @@ function startQuiz() {
 $$('[data-open-quiz]').forEach(button => button.addEventListener('click', () => { startQuiz(); openModal(quizModal); }));
 
 // Contact demo: honest form behaviour without server-side integration.
-$$('[data-open-contact]').forEach(button => button.addEventListener('click', () => { openModal(contactModal); }));
+$$('[data-open-contact]').forEach(button => button.addEventListener('click', () => {
+  const service = button.dataset.contactService;
+  if (service) $('#contactForm select[name="servico"]').value = service;
+  openModal(contactModal);
+}));
 $('#contactForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;

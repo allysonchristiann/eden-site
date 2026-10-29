@@ -1,6 +1,6 @@
-# EDEN — Site institucional v2
+# EDEN — Site institucional v3
 
-Site estático original para a EDEN, com referência de linguagem visual minimalista, apresentações de produto, movimento sutil e tipografia editorial. Serviços: contabilidade, BPO financeiro e gestão estratégica. Textos próprios, baseados nos temas do Laboratório de Finanças; não foram reproduzidos seus depoimentos, resultados nem dados de contato.
+Site estático original para a EDEN, com referência de linguagem visual minimalista, apresentações de produto, movimento sutil e tipografia editorial. Serviços: BPO financeiro, fluxo de caixa e tesouraria, planejamento e budget, controladoria e indicadores, contas a receber e cobrança, faturamento e apoio fiscal, relatórios financeiros. Textos próprios, baseados nos temas do Laboratório de Finanças; não foram reproduzidos seus depoimentos, resultados nem dados de contato.
 
 ## Arquivos
 
@@ -42,3 +42,7 @@ Start-Process .\index.html
 - O site não depende de bibliotecas, serviços externos ou fontes remotas.
 
 Para desabilitar animações, use o sistema operacional com **Reduzir movimento** ativado; o site respeita `prefers-reduced-motion`.
+
+## Novidade da versão 3
+
+Os sete serviços e as respectivas 47 entregas estão descritos em cartões com painéis expansíveis. Os botões de contato selecionam automaticamente o serviço desejado; o formulário continua sendo apenas uma demonstração sem envio.
