@@ -77,3 +77,41 @@
 @media(max-width:830px){.service-panel{min-height:390px;padding:30px 28px 24px}.service-panel--wide{column-gap:25px}.service-panel-top{margin-bottom:40px}.panel-copy h3{font-size:clamp(29px,4.2vw,36px)}.service-postscript{gap:14px}}
 @media(max-width:600px){.service-catalog{grid-template-columns:1fr;gap:14px}.service-panel{min-height:0;border-radius:24px;padding:27px 25px 21px}.service-panel--wide{grid-column:auto;display:flex}.service-panel--wide .service-panel-top,.service-panel--wide .panel-copy,.service-panel--wide .service-details,.service-panel--wide .panel-footer{grid-column:auto;grid-row:auto}.service-panel-top{margin-bottom:44px}.panel-copy h3{font-size:35px}.panel-desc{font-size:14px;margin-bottom:30px}.panel-footer{gap:10px}.panel-foot-label{font-size:8px}.panel-contact{font-size:11px}.service-postscript{padding-top:39px;align-items:flex-start;flex-wrap:wrap}.service-postscript p{font-size:15px}.service-postscript .inline-link{width:100%;padding-left:43px}}
 @media(prefers-reduced-motion:reduce){.service-panel,.service-panel::before,.panel-contact span,.details-sign{transition:none!important}}
+
+
+/* EDEN 3.1 - Alinhamento dos botoes */
+.details-sign {
+    position: relative;
+    display: block;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    align-self: center;
+    font-size: 0;
+    transform: none !important;
+}
+
+.details-sign::before,
+.details-sign::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    background: currentColor;
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+}
+
+.details-sign::before {
+    width: 10px;
+    height: 1.5px;
+}
+
+.details-sign::after {
+    width: 1.5px;
+    height: 10px;
+}
+
+.service-details[open] .details-sign::after {
+    opacity: 0;
+}

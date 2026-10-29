@@ -14,8 +14,17 @@
   <link rel="canonical" href="https://edenfin.com.br/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDEN — Clareza para ir além.</title>
-  <link rel="stylesheet" href="styles.css">
-  <script defer src="script.js"></script>
+  <script>
+history.scrollRestoration = "manual";
+if (performance.getEntriesByType("navigation")[0]?.type === "reload") {
+    document.documentElement.style.scrollBehavior = "auto";
+    if (location.hash) {
+        history.replaceState(null, "", location.pathname + location.search);
+    }
+}
+</script>
+<link rel="stylesheet" href="styles.css?v=3.1">
+  <script defer src="script.js?v=3.1"></script>
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -123,7 +132,7 @@
               <p class="panel-desc">Assumimos a rotina financeira da sua empresa para que você tenha mais organização, controle e tempo para focar no crescimento do negócio.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>Contas a pagar e receber</li>
                 <li>Faturamento e cobranças</li>
@@ -149,7 +158,7 @@
               <p class="panel-desc">Tenha uma visão clara da posição financeira da sua empresa e das necessidades de caixa.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>Fluxo de caixa realizado e projetado</li>
                 <li>Projeções financeiras</li>
@@ -175,7 +184,7 @@
               <p class="panel-desc">Transformamos os números da sua empresa em informações para apoiar decisões mais estratégicas.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>Elaboração e acompanhamento de Budget</li>
                 <li>Orçado x realizado</li>
@@ -201,7 +210,7 @@
               <p class="panel-desc">Acompanhe o desempenho financeiro da sua empresa por meio de informações claras e indicadores relevantes.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>DRE Gerencial</li>
                 <li>DFC</li>
@@ -229,7 +238,7 @@
               <p class="panel-desc">Reduza a inadimplência e tenha maior controle sobre os valores a receber.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>Gestão de contas a receber</li>
                 <li>Controle de inadimplência</li>
@@ -256,7 +265,7 @@
               <p class="panel-desc">Organização e controle das informações financeiras e fiscais que fazem parte da rotina da empresa.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>Emissão e controle de notas fiscais</li>
                 <li>Conferência de documentos fiscais</li>
@@ -282,7 +291,7 @@
               <p class="panel-desc">Informações organizadas para que o empresário saiba exatamente como está a saúde financeira do negócio.</p>
             </div>
             <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true">+</span></summary>
+              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
               <ul>
                 <li>Relatório de fluxo de caixa</li>
                 <li>DRE gerencial</li>

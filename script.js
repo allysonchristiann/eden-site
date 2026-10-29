@@ -251,3 +251,27 @@ $('#contactForm').addEventListener('submit', async event => {
     status.append(text); text.focus(); text.select();
   }
 });
+
+
+/* EDEN_RESET_31 */
+if (performance.getEntriesByType('navigation')[0]?.type === 'reload') {
+    const resetEden = () => {
+        document.querySelectorAll('details').forEach(el => {
+            el.open = false;
+        });
+        document.querySelectorAll('form').forEach(el => el.reset());
+        document.querySelectorAll('dialog[open]').forEach(el => el.close());
+        document.body.classList.remove('dialog-open');
+        window.scrollTo(0, 0);
+    };
+
+    resetEden();
+
+    window.addEventListener('pageshow', () => {
+        resetEden();
+        requestAnimationFrame(resetEden);
+        setTimeout(() => {
+            document.documentElement.style.removeProperty('scroll-behavior');
+        }, 300);
+    });
+}
