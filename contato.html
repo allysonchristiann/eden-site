@@ -246,8 +246,9 @@ footer {
 @media(prefers-reduced-motion:reduce) {
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+.submit:disabled{opacity:.65;cursor:wait}
 </style>
-<script defer src="contato.js?v=5.0"></script>
+<script defer src="contato.js?v=6.0"></script>
 </head>
 <body>
 <header>
@@ -276,7 +277,7 @@ footer {
         <p id="etapaResumo"></p>
         <ol id="respostasResumo"></ol>
       </div>
-      <form id="leadForm">
+      <form id="leadForm" method="POST" action="https://formsubmit.co/contato@edenfin.com.br">
         <div class="row">
           <label>Seu nome
             <input name="nome" autocomplete="name" required maxlength="100" placeholder="Como podemos chamar você?">
@@ -310,12 +311,16 @@ footer {
           <textarea name="mensagem" maxlength="3000" placeholder="Conte sobre suas prioridades e desafios..."></textarea>
         </label>
         <input type="hidden" name="avaliacao" id="avaliacaoHidden">
+<input type="hidden" name="_subject" value="Novo contato pelo site EDEN">
+<input type="hidden" name="_template" value="table">
+<input type="hidden" name="_url" value="https://edenfin.com.br/contato.html">
+<input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
         <label class="consent">
           <input type="checkbox" required name="consentimento">
-          Autorizo o uso dos meus dados para resposta a esta solicitação, quando o canal de envio for ativado.
+          Autorizo o uso dos meus dados e das respostas da avaliação para que a EDEN entre em contato. O envio será processado pelo serviço FormSubmit.
         </label>
-        <button class="submit" type="submit">Preparar solicitação ↗</button>
-        <p class="hint">O envio por e-mail ainda não está ativo. Por enquanto, este botão apenas prepara os dados para cópia, sem enviá-los à EDEN.</p>
+        <button class="submit" type="submit">Enviar solicitação ↗</button>
+        <p class="hint">Os dados serão encaminhados para contato@edenfin.com.br por meio do FormSubmit.</p>
         <div id="formResult" class="result" role="status" aria-live="polite"></div>
       </form>
     </section>

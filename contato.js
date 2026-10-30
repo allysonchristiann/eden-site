@@ -47,60 +47,94 @@
     } catch {}
   }
 
-  form.addEventListener('submit',event => {
+  form.addEventListener('submit', async event => {
     event.preventDefault();
 
     if (!form.reportValidity()) return;
 
+    const button = form.querySelector('button[type="submit"]');
+    if (button.disabled) return;
+
     const data = new FormData(form);
+    const feedback = document.getElementById('formResult');
 
-    const summary = [
-      'CONTATO EDEN',
-      `Nome: ${data.get('nome')}`,
-      `E-mail: ${data.get('email')}`,
-      `Empresa: ${data.get('empresa')}`,
-      `Telefone: ${data.get('telefone') || 'Não informado'}`,
-      `Solução: ${data.get('servico')}`,
-      `Mensagem: ${data.get('mensagem') || 'Não informada'}`,
-      data.get('avaliacao')
-        ? `\nAVALIAÇÃO FINANCEIRA\n${data.get('avaliacao')}`
-        : ''
-    ].filter(Boolean).join('\n');
+    feedback.classList.add('show');
+    feedback.replaceChildren();
 
-    const area = document.getElementById('formResult');
-    area.replaceChildren();
-    area.classList.add('show');
+    const payload = {
+      name: String(data.get('nome') || '').trim(),
+      email: String(data.get('email') || '').trim(),
+      empresa: String(data.get('empresa') || '').trim(),
+      telefone: String(data.get('telefone') || '').trim(),
+      servico: String(data.get('servico') || '').trim(),
+      mensagem: String(data.get('mensagem') || '').trim(),
+      avaliacao_financeira:
+        String(data.get('avaliacao') || '').trim() || 'Não realizada',
+      _subject: 'Novo contato EDEN - ' +
+        String(data.get('empresa') || 'Site EDEN').trim(),
+      _template: 'table',
+      _url: 'https://edenfin.com.br/contato.html',
+      _honey: String(data.get('_honey') || '')
+    };
 
-    const title = document.createElement('strong');
-    title.textContent = 'Solicitação preparada. Nenhum e-mail foi enviado.';
+    if (payload._honey) return;
 
-    const preview = document.createElement('textarea');
-    preview.readOnly = true;
-    preview.value = summary;
-    preview.setAttribute('aria-label','Resumo da solicitação');
+    const textoOriginal = button.textContent;
 
-    const copy = document.createElement('button');
-    copy.type = 'button';
-    copy.textContent = 'Copiar dados';
+    button.disabled = true;
+    button.textContent = 'Enviando solicitação...';
+    feedback.textContent = 'Enviando seus dados com segurança...';
 
-    copy.addEventListener('click',async () => {
-      try {
-        await navigator.clipboard.writeText(summary);
-        copy.textContent = 'Dados copiados ✓';
-      } catch {
-        preview.focus();
-        preview.select();
-        copy.textContent = 'Selecione e copie os dados acima';
+    try {
+      const response = await fetch(
+        'https://formsubmit.co/ajax/contato@edenfin.com.br',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const result = await response.json();
+
+      const success =
+        result.success === true ||
+        result.success === 'true';
+
+      if (!response.ok || !success) {
+        const message = String(result.message || '');
+
+        if (/activat|confirm/i.test(message)) {
+          feedback.textContent =
+            'O formulário ainda precisa ser ativado. ' +
+            'Verifique contato@edenfin.com.br e confirme ' +
+            'a mensagem enviada pelo FormSubmit.';
+          return;
+        }
+
+        throw new Error(message || 'Falha no envio');
       }
-    });
 
-    area.append(title,preview,copy);
+      feedback.textContent =
+        'Solicitação enviada com sucesso! ' +
+        'Obrigado pelo contato. A EDEN responderá pelo e-mail informado.';
 
-    area.scrollIntoView({
-      behavior:matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'auto'
-        : 'smooth',
-      block:'nearest'
-    });
+      form.reset();
+      sessionStorage.removeItem('edenAvaliacao');
+
+    } catch (error) {
+      console.error('Erro ao enviar formulário:', error);
+
+      feedback.textContent =
+        'Não foi possível enviar sua solicitação. ' +
+        'Tente novamente ou escreva para contato@edenfin.com.br.';
+
+    } finally {
+      button.disabled = false;
+      button.textContent = textoOriginal;
+    }
   });
 })();
