@@ -247,8 +247,39 @@ footer {
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
 .submit:disabled{opacity:.65;cursor:wait}
+#formResult.show {
+  display: block;
+  padding: 18px 20px;
+  border-radius: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  animation: rise .35s ease both;
+}
+
+#formResult[data-state="success"] {
+  background: #12392f;
+  border: 1px solid #388d72;
+  color: #a5f0d0;
+}
+
+#formResult[data-state="pending"] {
+  background: #1a3150;
+  border: 1px solid #39649d;
+  color: #b9d5ff;
+}
+
+#formResult[data-state="error"] {
+  background: #39252c;
+  border: 1px solid #97545f;
+  color: #ffd0d5;
+}
+
+.submit:disabled {
+  opacity: .7;
+  cursor: progress;
+}
 </style>
-<script defer src="contato.js?v=7.0"></script>
+<script defer src="contato.js?v=8.0"></script>
 </head>
 <body>
 <header>
