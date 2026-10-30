@@ -279,7 +279,7 @@ footer {
   cursor: progress;
 }
 </style>
-<script defer src="contato.js?v=9.0"></script>
+<script defer src="contato.js?v=10.0"></script>
 </head>
 <body>
 <header>
@@ -308,7 +308,7 @@ footer {
         <p id="etapaResumo"></p>
         <ol id="respostasResumo"></ol>
       </div>
-      <form id="leadForm" method="POST" action="https://script.google.com/macros/s/AKfycbw89z01mQ6A7WVKcSdaX5q2a1TttF-CagPa71ZMvj9g_a6g5gtyoF0v2r6SvEaJBT1t/exec" onsubmit="return false;">
+      <form id="leadForm" onsubmit="return false;">
         <div class="row">
           <label>Seu nome
             <input name="nome" autocomplete="name" required maxlength="100" placeholder="Como podemos chamar você?">
@@ -345,10 +345,10 @@ footer {
 <input type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
         <label class="consent">
           <input type="checkbox" required name="consentimento">
-          Autorizo o uso dos meus dados e das respostas da avaliação para que a EDEN entre em contato. O envio será processado pelo Google para atendimento da EDEN.
+          Autorizo o uso dos meus dados e das respostas da avaliação para que a EDEN entre em contato. Os dados serão preparados em uma mensagem para atendimento via WhatsApp.
         </label>
-        <button class="submit" type="submit">Enviar solicitação ↗</button>
-        <p class="hint">Os dados serão encaminhados para relacionamento@edenfin.com.br automaticamente.</p>
+        <button class="submit" type="submit">Continuar pelo WhatsApp ↗</button>
+        <p class="hint">O WhatsApp será aberto com seus dados. Revise a mensagem e toque em Enviar para concluir.</p>
         <div id="formResult" class="result" role="status" aria-live="polite"></div>
       </form>
     </section>

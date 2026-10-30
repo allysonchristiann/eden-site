@@ -59,125 +59,31 @@
     }
   }
 
-  const botao = form.querySelector('button[type="submit"]');
-  const caixa = document.getElementById('formResult');
-  const textoOriginal = botao.textContent;
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
 
-  let enviando = false;
-  let ticket = '';
-  let timeout;
-  let proximaConsulta;
+    if (!form.reportValidity()) return;
+    if (form.elements.namedItem('_honey')?.value) return;
 
-  function mostrar(texto, estado) {
-    caixa.textContent = texto;
-    caixa.dataset.state = estado;
-    caixa.classList.add('show');
-    caixa.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest'
-    });
-  }
+    const valor = nome =>
+      String(form.elements.namedItem(nome)?.value || '').trim();
 
-  function finalizar(sucesso) {
-    if (!enviando) return;
+    const linhas = [
+      '*Novo contato - EDEN*',
+      `*Nome:* ${valor('nome')}`,
+      `*Empresa:* ${valor('empresa')}`,
+      `*E-mail:* ${valor('email')}`,
+      valor('telefone') ? `*Telefone:* ${valor('telefone')}` : '',
+      `*Solução de interesse:* ${valor('servico')}`,
+      valor('mensagem') ? `*Mensagem:* ${valor('mensagem')}` : '',
+      valor('avaliacao') ? `*Avaliação financeira:*\n${valor('avaliacao')}` : ''
+    ].filter(Boolean);
 
-    enviando = false;
-    clearTimeout(timeout);
-    clearTimeout(proximaConsulta);
+    const mensagem = encodeURIComponent(linhas.join('\n\n'));
 
-    botao.disabled = false;
-    botao.textContent = textoOriginal;
-
-    if (sucesso) {
-      mostrar(
-        'Solicitação enviada com sucesso! A EDEN recebeu seus dados.',
-        'success'
-      );
-
-      form.reset();
-      sessionStorage.removeItem('edenAvaliacao');
-    } else {
-      mostrar(
-        'Não foi possível confirmar o envio. Verifique seu e-mail antes de tentar novamente.',
-        'error'
-      );
-    }
-  }
-
-  window.edenEmailStatus = function(resultado) {
-    if (!enviando || !resultado || resultado.id !== ticket) return;
-
-    if (resultado.ok === true) {
-      finalizar(true);
-    }
-  };
-
-  function consultar() {
-    if (!enviando) return;
-
-    const url = new URL(form.action);
-    url.searchParams.set('receipt', ticket);
-    url.searchParams.set('_', String(Date.now()));
-
-    const script = document.createElement('script');
-    script.src = url.toString();
-    script.async = true;
-
-    const continuar = () => {
-      script.remove();
-
-      if (enviando) {
-        proximaConsulta = setTimeout(consultar, 1800);
-      }
-    };
-
-    script.onload = continuar;
-    script.onerror = continuar;
-
-    document.head.appendChild(script);
-  }
-
-  form.addEventListener('submit', function(evento) {
-    evento.preventDefault();
-    evento.stopImmediatePropagation();
-
-    if (enviando || !form.reportValidity()) return;
-
-    ticket = Array.from(
-      crypto.getRandomValues(new Uint8Array(16)),
-      b => b.toString(16).padStart(2, '0')
-    ).join('');
-
-    let campo = form.querySelector('[name="eden_ticket"]');
-
-    if (!campo) {
-      campo = document.createElement('input');
-      campo.type = 'hidden';
-      campo.name = 'eden_ticket';
-      form.appendChild(campo);
-    }
-
-    campo.value = ticket;
-    enviando = true;
-
-    botao.disabled = true;
-    botao.textContent = 'Enviando solicitação...';
-
-    mostrar('Enviando seus dados à EDEN...', 'pending');
-
-    const dados = new URLSearchParams(new FormData(form));
-
-    fetch(form.action, {
-      method: 'POST',
-      mode: 'no-cors',
-      credentials: 'omit',
-      body: dados
-    }).catch(erro => {
-      console.warn('Resposta do envio indisponivel', erro);
-    });
-
-    timeout = setTimeout(() => finalizar(false), 60000);
-    proximaConsulta = setTimeout(consultar, 1800);
-
+    window.location.assign(
+      'https://wa.me/5511972147686?text=' + mensagem
+    );
   }, true);
 })();
