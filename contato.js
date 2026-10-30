@@ -29,8 +29,9 @@
         const list = document.getElementById('respostasResumo');
 
         const lines = stored.items.map((item,i) => {
+          const pergunta = String(item.pergunta || '').replace(/^\s*\d+[.)]\s*/, '');
           const li = document.createElement('li');
-          li.textContent = `${i + 1}. ${item.pergunta}`;
+          li.textContent = pergunta;
 
           const span = document.createElement('span');
           span.textContent = item.resposta;
@@ -38,7 +39,7 @@
           li.append(span);
           list.append(li);
 
-          return `${i + 1}. ${item.pergunta}\nResposta: ${item.resposta}`;
+          return `${i + 1}. ${pergunta}\nResposta: ${item.resposta}`;
         });
 
         document.getElementById('avaliacaoHidden').value =
