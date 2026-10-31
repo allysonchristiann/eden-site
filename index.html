@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b1019">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="EDEN. BPO financeiro, tesouraria, planejamento, controladoria, cobrança, faturamento e relatórios para o seu negócio.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="EDEN — Clareza para ir além.">
@@ -29,6 +29,8 @@ if (performance.getEntriesByType("navigation")[0]?.type === "reload") {
 <link rel="stylesheet" href="eden-sistemas.css?v=1.0">
 <link rel="stylesheet" href="eden-solucoes-dinamicas.css?v=1.0">
 <script defer src="eden-leads.js?v=5.0"></script>
+<link rel="stylesheet" href="eden-black-gold.css?v=1.0">
+<script defer src="eden-constellation.js?v=1.0"></script>
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -66,7 +68,8 @@ if (performance.getEntriesByType("navigation")[0]?.type === "reload") {
           <button class="inline-link" type="button" data-open-quiz>Descubra seu estágio <span aria-hidden="true">›</span></button>
         </div>
       </div>
-      <div class="hero-stage" aria-label="Painel ilustrativo de inteligência financeira EDEN. Os valores são fictícios.">
+      <div class="hero-stage" aria-label="Visual artístico da EDEN em azul-marinho e dourado">
+        <canvas id="edenParticles" class="eden-particles" aria-hidden="true"></canvas>
         <div class="hero-orbit orbit-one" aria-hidden="true"></div><div class="hero-orbit orbit-two" aria-hidden="true"></div>
         <div class="floating-label floating-label-left" aria-hidden="true"><span class="label-icon">↗</span><span>Mais perspectiva.<small>Menos incerteza.</small></span></div>
         <div class="floating-label floating-label-right" aria-hidden="true"><span class="label-icon check-icon">✓</span><span>Visão conectada.<small>Decisões mais claras.</small></span></div>
