@@ -4,444 +4,186 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#000000">
-  <meta name="description" content="EDEN. BPO financeiro, tesouraria, planejamento, controladoria, cobrança, faturamento e relatórios para o seu negócio.">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="EDEN. Conectamos operação financeira, planejamento e inteligência para trazer clareza ao próximo passo da sua empresa.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="EDEN — Clareza para ir além.">
-  <meta property="og:description" content="O financeiro da sua empresa, em uma nova perspectiva.">
+  <meta property="og:description" content="Seu financeiro conectado. Suas decisões com mais clareza.">
   <meta property="og:url" content="https://edenfin.com.br/">
   <meta property="og:locale" content="pt_BR">
-  <meta name="color-scheme" content="dark">
   <link rel="canonical" href="https://edenfin.com.br/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>EDEN — Clareza para ir além.</title>
-  <script>
-history.scrollRestoration = "manual";
-if (performance.getEntriesByType("navigation")[0]?.type === "reload") {
-    document.documentElement.style.scrollBehavior = "auto";
-    if (location.hash) {
-        history.replaceState(null, "", location.pathname + location.search);
-    }
-}
-</script>
-<link rel="stylesheet" href="styles.css?v=4.1">
-  <script defer src="script.js?v=3.2"></script>
-<link rel="stylesheet" href="eden-upgrade.css?v=5.0">
-<link rel="stylesheet" href="eden-sistemas.css?v=1.0">
-<link rel="stylesheet" href="eden-solucoes-dinamicas.css?v=1.0">
-<script defer src="eden-leads.js?v=5.0"></script>
-<link rel="stylesheet" href="eden-black-gold.css?v=1.0">
-
-<link rel="stylesheet" href="eden-scroll-effects.css?v=1.0">
-<link rel="stylesheet" href="eden-motion.css?v=1.0">
-<script type="module" src="eden-motion.js?v=1.0"></script>
+  <link rel="stylesheet" href="eden-story.css?v=3.0">
+  <script defer src="eden-motion.js?v=3.0"></script>
+  <script defer src="eden-story.js?v=3.0"></script>
 </head>
 <body>
   <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
-  <div class="scroll-progress" aria-hidden="true"></div>
   <header class="site-header" id="topo">
     <nav class="nav-shell" aria-label="Menu principal">
-      <a class="wordmark" href="#inicio" aria-label="EDEN — início">
-        <svg class="eden-symbol" aria-hidden="true" viewBox="0 0 38 38" fill="none"><rect width="38" height="38" rx="11" fill="currentColor"/><path d="M24.5 11H14v16h10.5M14 19h8.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>EDEN<span class="wordmark-dot">.</span></span>
-      </a>
+      <a class="wordmark" href="#inicio" aria-label="EDEN — início">EDEN<span aria-hidden="true">.</span></a>
       <div class="nav-middle" id="navMiddle">
-
         <a href="#solucoes">Soluções</a>
-        <a href="#sistemas">Sistemas</a>
-        <a href="#experiencia">Experiência</a>
-        <a href="#metodo">Como funciona</a>
+        <a href="#metodo">Método</a>
+        <a href="#manifesto">Manifesto</a>
       </div>
       <div class="nav-actions">
-        <a class="nav-cta" href="#conversar">Vamos conversar <span aria-hidden="true">↗</span></a>
+        <a class="button nav-cta" href="contato.html">Agendar diagnóstico</a>
         <button class="mobile-menu-button" type="button" aria-controls="navMiddle" aria-expanded="false" aria-label="Abrir menu"><span></span><span></span></button>
       </div>
     </nav>
   </header>
 
+  <div id="eden-motion-layer" aria-hidden="true"><canvas id="edenParticles" aria-hidden="true"></canvas></div>
+
   <main id="conteudo">
-
-    <section class="hero" id="inicio" aria-labelledby="heroTitle">
-      <div class="hero-light" aria-hidden="true"></div>
-      <div class="hero-copy wrap">
-        <div class="hero-kicker enter"><span class="live-dot" aria-hidden="true"></span> EDEN · INTELIGÊNCIA FINANCEIRA</div>
-        <h1 class="hero-title enter" id="heroTitle">O futuro da sua empresa<br><span>começa com clareza.</span></h1>
-        <p class="hero-subtitle enter">Menos complexidade. Mais visão. Operação financeira, planejamento e inteligência em sintonia com o próximo passo do seu negócio.</p>
-        <div class="hero-buttons enter">
-          <a class="pill-button pill-dark" href="#solucoes">Conheça nossas soluções <span aria-hidden="true">↗</span></a>
-          <button class="inline-link" type="button" data-open-quiz>Descubra seu estágio <span aria-hidden="true">›</span></button>
-        </div>
+    <section class="story-section hero story-left" id="inicio" data-scene="brain-right" aria-labelledby="heroTitle">
+      <div class="story-panel hero-copy">
+        <h1 id="heroTitle">Clareza<br>para ir<br>além.</h1>
+        <p class="eyebrow hero-eyebrow">Inteligência conectada ao seu negócio.</p>
+        <p class="body-copy">Menos complexidade. Mais visão. Conecte o financeiro da sua empresa a decisões mais claras e ao próximo passo do seu negócio.</p>
+        <a class="button" href="contato.html">Vamos conversar <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
       </div>
-      <div class="hero-stage" aria-label="Visual artístico da EDEN em azul-marinho e dourado">
-        <canvas id="edenParticles" class="eden-particles" aria-hidden="true"></canvas>
-        <div class="hero-orbit orbit-one" aria-hidden="true"></div><div class="hero-orbit orbit-two" aria-hidden="true"></div>
-        <div class="floating-label floating-label-left" aria-hidden="true"><span class="label-icon">↗</span><span>Mais perspectiva.<small>Menos incerteza.</small></span></div>
-        <div class="floating-label floating-label-right" aria-hidden="true"><span class="label-icon check-icon">✓</span><span>Visão conectada.<small>Decisões mais claras.</small></span></div>
-        <div class="display-shadow" aria-hidden="true"></div>
-        <div class="dashboard-display">
-          <div class="dashboard-menu">
-            <div class="dash-monogram">e<span>.</span></div>
-            <div class="dash-nav-icons" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>
-              <svg viewBox="0 0 24 24"><path d="M3 18l6-6 4 4 8-10"/></svg>
-              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4m8-4v4M4 10h16"/></svg>
-            </div>
-            <div class="dash-nav-bottom" aria-hidden="true">↗</div>
-          </div>
-          <div class="dashboard-body">
-            <div class="dashboard-top"><div><span class="dash-eyebrow">PAINEL FINANCEIRO / VISÃO GERAL</span><h2>Clareza para decidir<span>.</span></h2></div><span class="dash-date">Visão consolidada <i></i></span></div>
-            <div class="metrics">
-              <div class="metric"><span>Receita total</span><strong>R$ 248.500</strong><small class="positive">↗ 12,8% <em>no período</em></small></div>
-              <div class="metric"><span>Resultado operacional</span><strong>R$ 68.240</strong><small class="positive">↗ 8,4% <em>no período</em></small></div>
-              <div class="metric"><span>Previsibilidade</span><strong>94,2%</strong><small>Planejamento organizado</small></div>
-            </div>
-            <div class="dash-visuals">
-              <div class="dash-main-chart">
-                <div class="dash-chart-heading"><div><strong>Evolução financeira</strong><small>Entradas e saídas · visão ilustrativa</small></div><span class="chart-legend"><i></i> Entradas</span></div>
-                <div class="hero-chart-frame">
-                  <div class="hero-chart-guides" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-                  <svg class="hero-chart-svg" viewBox="0 0 640 205" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#4e83fa" stop-opacity=".28"/><stop offset="1" stop-color="#4e83fa" stop-opacity="0"/></linearGradient></defs><path class="area-path" d="M0 179C55 164 75 159 112 167S196 118 246 127S330 89 372 102 465 41 507 52 587 28 640 13V205H0Z" fill="url(#chartFill)"/><path class="animated-path" d="M0 179C55 164 75 159 112 167S196 118 246 127S330 89 372 102 465 41 507 52 587 28 640 13" fill="none" stroke="#437af5" stroke-width="4.5" stroke-linecap="round"/><path d="M0 184C50 175 77 177 112 181S198 156 246 164 327 140 372 147 465 121 507 129 588 106 640 112" fill="none" stroke="#ccd5e4" stroke-dasharray="5 9" stroke-width="3" stroke-linecap="round"/></svg>
-                </div>
-                <div class="chart-month-labels"><span>JAN</span><span>FEV</span><span>MAR</span><span>ABR</span><span>MAI</span><span>JUN</span></div>
-              </div>
-              <div class="dash-side-chart"><strong>Distribuição</strong><small>Custos por categoria</small><div class="donut"><span>100%<small>mapeado</small></span></div><div class="donut-item"><span><i></i> Operação</span><b>48%</b></div><div class="donut-item"><span><i></i> Pessoas</span><b>32%</b></div><div class="donut-item"><span><i></i> Outros</span><b>20%</b></div></div>
-            </div>
-          </div>
-        </div>
-        <p class="demo-note">Interface ilustrativa. Todos os valores apresentados são fictícios.</p>
-      </div>
-      <a class="hero-scroll" href="#solucoes" aria-label="Rolar para a próxima seção"><span></span> DESCUBRA A EDEN</a>
+      <a class="scroll-cue" href="#clareza"><span aria-hidden="true">↓</span> Uma nova perspectiva</a>
     </section>
 
-    <div class="chapter-line" aria-label="Pilares da EDEN"><div>BPO FINANCEIRO</div><b>+</b><div>TESOURARIA</div><b>+</b><div>CONTROLADORIA</div></div>
-
-
-
-
-
-    <section class="services section-padding" id="solucoes" aria-labelledby="servicesTitle">
-      <div class="wrap">
-        <div class="section-heading reveal"><p class="eyebrow">NOSSAS SOLUÇÕES</p><h2 id="servicesTitle">Cada detalhe importa.<br><span class="muted">Seu financeiro também.</span></h2><p>Da operação à estratégia, oito frentes para trazer organização, previsibilidade e direção ao seu negócio.</p></div>
-        <div class="service-catalog">
-          <article tabindex="0" class="service-panel service-panel--dark reveal" aria-labelledby="service-01">
-            <div class="service-panel-top">
-              <span class="panel-index">01 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">↗</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">OPERAÇÃO FINANCEIRA</p>
-              <h3 id="service-01">BPO Financeiro</h3>
-              <p class="panel-desc">Assumimos a rotina financeira da sua empresa para que você tenha mais organização, controle e tempo para focar no crescimento do negócio.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Contas a pagar e receber</li>
-                <li>Faturamento e cobranças</li>
-                <li>Conciliação bancária</li>
-                <li>Controle de movimentações financeiras</li>
-                <li>Gestão de contas bancárias</li>
-                <li>Organização da rotina financeira</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 01</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="BPO Financeiro" aria-label="Conversar sobre BPO Financeiro">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel service-panel--bright reveal" aria-labelledby="service-02">
-            <div class="service-panel-top">
-              <span class="panel-index">02 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">⌁</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">CAIXA & PREVISIBILIDADE</p>
-              <h3 id="service-02">Fluxo de Caixa e Tesouraria</h3>
-              <p class="panel-desc">Tenha uma visão clara da posição financeira da sua empresa e das necessidades de caixa.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Fluxo de caixa realizado e projetado</li>
-                <li>Projeções financeiras</li>
-                <li>Controle de saldos e disponibilidade de caixa</li>
-                <li>Acompanhamento de pagamentos e recebimentos</li>
-                <li>Gestão do relacionamento bancário</li>
-                <li>Planejamento financeiro de curto, médio e longo prazo</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 02</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Fluxo de Caixa e Tesouraria" aria-label="Conversar sobre Fluxo de Caixa e Tesouraria">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel reveal" aria-labelledby="service-03">
-            <div class="service-panel-top">
-              <span class="panel-index">03 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">◎</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">PLANEJAMENTO & METAS</p>
-              <h3 id="service-03">Planejamento Financeiro e Budget</h3>
-              <p class="panel-desc">Transformamos os números da sua empresa em informações para apoiar decisões mais estratégicas.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Elaboração e acompanhamento de Budget</li>
-                <li>Orçado x realizado</li>
-                <li>Controle de custos e despesas</li>
-                <li>Análise de variações</li>
-                <li>Projeções financeiras</li>
-                <li>Planejamento de resultados</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 03</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Planejamento Financeiro e Budget" aria-label="Conversar sobre Planejamento Financeiro e Budget">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel reveal" aria-labelledby="service-04">
-            <div class="service-panel-top">
-              <span class="panel-index">04 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">◈</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">PERFORMANCE & GESTÃO</p>
-              <h3 id="service-04">Controladoria e Indicadores</h3>
-              <p class="panel-desc">Acompanhe o desempenho financeiro da sua empresa por meio de informações claras e indicadores relevantes.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>DRE Gerencial</li>
-                <li>DFC</li>
-                <li>KPIs financeiros</li>
-                <li>Análise de resultados</li>
-                <li>Análise de custos e despesas</li>
-                <li>Acompanhamento de centros de custos</li>
-                <li>Relatórios gerenciais</li>
-                <li>Apoio à tomada de decisão</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 04</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Controladoria e Indicadores" aria-label="Conversar sobre Controladoria e Indicadores">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel reveal" aria-labelledby="service-05">
-            <div class="service-panel-top">
-              <span class="panel-index">05 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">↙</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">RECEBÍVEIS & CRÉDITO</p>
-              <h3 id="service-05">Contas a Receber e Cobrança</h3>
-              <p class="panel-desc">Reduza a inadimplência e tenha maior controle sobre os valores a receber.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Gestão de contas a receber</li>
-                <li>Controle de inadimplência</li>
-                <li>Cobrança de clientes</li>
-                <li>Renegociação de dívidas</li>
-                <li>Acompanhamento de acordos</li>
-                <li>Análise de crédito</li>
-                <li>Relatórios de recebimentos e inadimplência</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 05</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Contas a Receber e Cobrança" aria-label="Conversar sobre Contas a Receber e Cobrança">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel reveal" aria-labelledby="service-06">
-            <div class="service-panel-top">
-              <span class="panel-index">06 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">≡</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">FATURAMENTO & DOCUMENTOS</p>
-              <h3 id="service-06">Faturamento e Apoio Fiscal</h3>
-              <p class="panel-desc">Organização e controle das informações financeiras e fiscais que fazem parte da rotina da empresa.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Emissão e controle de notas fiscais</li>
-                <li>Conferência de documentos fiscais</li>
-                <li>Controle de retenções</li>
-                <li>Organização de documentos para a contabilidade</li>
-                <li>Interface com o escritório contábil</li>
-                <li>Apoio nos processos financeiros relacionados à área fiscal</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 06</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Faturamento e Apoio Fiscal" aria-label="Conversar sobre Faturamento e Apoio Fiscal">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel service-panel--wide reveal" aria-labelledby="service-07">
-            <div class="service-panel-top">
-              <span class="panel-index">07 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">▥</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">RELATÓRIOS & VISIBILIDADE</p>
-              <h3 id="service-07">Relatórios Financeiros</h3>
-              <p class="panel-desc">Informações organizadas para que o empresário saiba exatamente como está a saúde financeira do negócio.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Relatório de fluxo de caixa</li>
-                <li>DRE gerencial</li>
-                <li>Relatório de contas a pagar</li>
-                <li>Relatório de contas a receber</li>
-                <li>Relatório de inadimplência</li>
-                <li>Relatórios de custos e despesas</li>
-                <li>Indicadores financeiros</li>
-                <li>Orçado x realizado</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 07</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Relatórios Financeiros" aria-label="Conversar sobre Relatórios Financeiros">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-          <article tabindex="0" class="service-panel service-panel--wide reveal" aria-labelledby="service-08">
-            <div class="service-panel-top">
-              <span class="panel-index">08 <span>/ 08</span></span>
-              <span class="panel-symbol" aria-hidden="true">⌘</span>
-            </div>
-            <div class="panel-copy">
-              <p class="panel-category">TECNOLOGIA & AUTOMAÇÃO</p>
-              <h3 id="service-08">Desenvolvimento de Sistemas Financeiros Customizados</h3>
-              <p class="panel-desc">Sistemas financeiros sob medida para automatizar processos, integrar plataformas e atender às necessidades de cada empresa.</p>
-            </div>
-            <details class="service-details">
-              <summary>O que está incluído <span class="details-sign" aria-hidden="true"></span></summary>
-              <ul>
-                <li>Desenvolvimento de sistemas financeiros personalizados</li>
-                <li>Automação de processos e rotinas financeiras</li>
-                <li>Integração com ERPs, bancos e APIs</li>
-                <li>Dashboards e indicadores personalizados</li>
-                <li>Sistemas de contas a pagar e receber</li>
-                <li>Manutenção e evolução de aplicações</li>
-              </ul>
-            </details>
-            <div class="panel-footer">
-              <span class="panel-foot-label">EDEN / SOLUÇÃO 08</span>
-              <button type="button" class="panel-contact" data-open-contact data-contact-service="Desenvolvimento de Sistemas Financeiros Customizados">Vamos conversar <span aria-hidden="true">↗</span></button>
-            </div>
-          </article>
-        </div>
-        <div class="service-postscript reveal"><span class="service-postscript-star" aria-hidden="true">✳</span><p>Não é sobre ter mais números.<br><strong>É sobre saber o que fazer com eles.</strong></p><a href="#conversar" class="inline-link">Conheça a EDEN <span aria-hidden="true">↗</span></a></div>
+    <section class="story-section story-right" id="clareza" data-scene="brain-left" aria-labelledby="clarityTitle">
+      <div class="story-panel">
+        <p class="eyebrow">Uma visão. Mais possibilidades.</p>
+        <h2 id="clarityTitle">Decida com<br>clareza.</h2>
+        <p class="body-copy">O que acontece no seu financeiro diz muito sobre o que vem pela frente.</p>
+        <p class="body-copy">Reunimos operação, análise e planejamento para que os números façam sentido. E você tenha mais contexto para decidir.</p>
+        <a class="text-link" href="#solucoes">Conheça nossas soluções <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
       </div>
     </section>
 
-
-    <section class="eden-tech" id="sistemas" aria-labelledby="edenTechTitle">
-      <div class="wrap">
-        <div class="eden-tech-header">
-          <p class="eden-tech-label">EDEN / TECNOLOGIA FINANCEIRA</p>
-          <span class="eden-tech-mark">DESENVOLVIMENTO SOB MEDIDA / 01</span>
-        </div>
-
-        <div class="eden-tech-intro">
-          <div>
-            <h2 id="edenTechTitle">
-              Tecnologia que entende
-              <span>o seu financeiro.</span>
-            </h2>
-          </div>
-          <div class="eden-tech-description">
-            <h3>Desenvolvimento de Sistemas Financeiros Customizados para Empresas</h3>
-            <p>
-              Desenvolvemos soluções tecnológicas adaptadas aos processos
-              e às necessidades da sua empresa. Automatizamos rotinas,
-              conectamos sistemas e transformamos operações complexas
-              em experiências mais simples e eficientes.
-            </p>
-            <a class="eden-tech-cta"
-               href="contato.html?servico=Desenvolvimento%20de%20Sistemas%20Financeiros%20Customizados">
-              Solicitar um projeto <span aria-hidden="true">↗</span>
-            </a>
-          </div>
-        </div>
-
-        <div class="eden-tech-grid">
-          <article class="eden-tech-card">
-            <span class="eden-tech-number">01 / AUTOMAÇÃO</span>
-            <h3>Processos inteligentes.</h3>
-            <p>Automação de rotinas financeiras, aprovações, conciliações e atividades repetitivas.</p>
-          </article>
-          <article class="eden-tech-card">
-            <span class="eden-tech-number">02 / INTEGRAÇÕES</span>
-            <h3>Sistemas conectados.</h3>
-            <p>Integrações com ERPs, instituições financeiras, APIs e plataformas corporativas.</p>
-          </article>
-          <article class="eden-tech-card">
-            <span class="eden-tech-number">03 / INTELIGÊNCIA</span>
-            <h3>Informação que gera valor.</h3>
-            <p>Dashboards, indicadores e painéis desenvolvidos para apoiar decisões financeiras.</p>
-          </article>
-          <article class="eden-tech-card">
-            <span class="eden-tech-number">04 / SOFTWARE</span>
-            <h3>Feito para sua operação.</h3>
-            <p>Sistemas de contas a pagar e receber, gestão financeira e aplicações personalizadas.</p>
-          </article>
-        </div>
-
-        <div class="eden-tech-footer">
-          <span>SEU PROCESSO. SUA NECESSIDADE. SUA SOLUÇÃO.</span>
-          <a href="contato.html?servico=Desenvolvimento%20de%20Sistemas%20Financeiros%20Customizados">
-            Vamos construir juntos ↗
-          </a>
-        </div>
+    <section class="story-section story-center story-chaos" id="cenario" data-scene="scatter" aria-labelledby="scenarioTitle">
+      <div class="story-panel story-statement">
+        <p class="eyebrow">Do excesso à essência.</p>
+        <h2 id="scenarioTitle">Informação espalhada.<br>Decisões desconectadas.</h2>
+        <p class="body-copy">Planilhas, contas, sistemas e relatórios.<br>Quando cada parte conta uma história, fica difícil enxergar o todo.</p>
+        <p class="body-copy statement-end">É hora de conectar os pontos.</p>
       </div>
     </section>
 
-    <section class="experience section-padding" id="experiencia" aria-labelledby="experienceTitle">
-      <div class="wrap">
-        <div class="section-heading center reveal"><p class="eyebrow">EXPERIÊNCIA EDEN</p><h2 id="experienceTitle">Seu negócio.<br><span class="muted">Em alta definição.</span></h2><p>Informações claras para enxergar prioridades, antecipar cenários e tomar decisões com mais contexto.</p></div>
-        <div class="experience-selector reveal" role="tablist" aria-label="Prévia das perspectivas financeiras">
-          <button class="experience-tab active" type="button" role="tab" id="tab-caixa" aria-controls="tabPanel" aria-selected="true" data-view="caixa">Fluxo de caixa</button>
-          <button class="experience-tab" type="button" role="tab" id="tab-indicadores" aria-controls="tabPanel" aria-selected="false" data-view="indicadores">Indicadores</button>
-          <button class="experience-tab" type="button" role="tab" id="tab-planejamento" aria-controls="tabPanel" aria-selected="false" data-view="planejamento">Planejamento</button>
-        </div>
-        <div class="product-platform reveal" id="tabPanel" role="tabpanel" aria-labelledby="tab-caixa">
-          <div class="product-screen"><div class="product-screen-top"><div><span class="product-wordmark">EDEN<span>.</span></span><span class="product-caption">VISÃO ESTRATÉGICA</span></div><span class="product-status"><i></i> Demo ilustrativa</span></div>
-            <div class="product-text"><span class="product-kicker" id="productKicker">VISÃO DO CAIXA</span><h3 id="productTitle">Saiba onde está.<br>Planeje onde quer chegar.</h3><p id="productDescription">Acompanhe entradas, saídas e possibilidades com uma leitura simples e objetiva.</p></div>
-            <div class="product-metrics"><div><small id="statOneLabel">Visibilidade</small><strong id="statOne">Dia a dia</strong></div><div><small id="statTwoLabel">Perspectiva</small><strong id="statTwo">Futuro</strong></div><div><small id="statThreeLabel">Prioridade</small><strong id="statThree">Clareza</strong></div></div>
-            <div class="product-chart"><div class="product-gridlines"><i></i><i></i><i></i><i></i></div><svg viewBox="0 0 960 250" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="productFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7da6ff" stop-opacity=".48"/><stop offset="1" stop-color="#7da6ff" stop-opacity="0"/></linearGradient></defs><path id="productArea" d="M0 205C82 186 129 212 198 176S299 160 354 174 460 112 518 127 617 86 686 95 784 65 844 74 927 32 960 21V250H0Z" fill="url(#productFill)"/><path id="productLine" d="M0 205C82 186 129 212 198 176S299 160 354 174 460 112 518 127 617 86 686 95 784 65 844 74 927 32 960 21" fill="none" stroke="#8cb4ff" stroke-width="5" stroke-linecap="round"/></svg></div>
-          </div>
-          <div class="product-reflection" aria-hidden="true"></div>
-        </div>
-        <p class="product-footnote">Demonstração visual de conceitos de gestão. A EDEN não disponibiliza um software financeiro nesta página.</p>
+    <section class="story-section story-right" id="metodo" data-scene="bulb" aria-labelledby="methodTitle">
+      <div class="story-panel">
+        <p class="eyebrow">Transformação que começa por dentro.</p>
+        <h2 id="methodTitle">Transforme<br>números<br>em direção.</h2>
+        <p class="body-copy">Primeiro, entendemos sua realidade. Depois, organizamos a rotina, conectamos informações e acompanhamos a evolução do seu financeiro.</p>
+        <p class="body-copy">Do controle diário ao planejamento. Cada etapa faz parte de uma visão maior.</p>
+        <a class="text-link" href="contato.html">Encontre seu ponto de partida <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
       </div>
     </section>
 
-
-    <section class="method section-padding" id="metodo" aria-labelledby="methodTitle">
-      <div class="wrap method-layout"><div class="method-intro reveal"><p class="eyebrow">SIMPLES, POR ESCOLHA</p><h2 id="methodTitle">Menos ruído.<br><span class="muted">Mais evolução.</span></h2><p>Um caminho estruturado para transformar a rotina financeira em uma fonte de clareza.</p><button class="inline-link" type="button" data-open-quiz>Descubra por onde começar <span aria-hidden="true">›</span></button></div>
-      <div class="method-steps"><article class="method-step reveal"><span>01</span><div><h3>Entender.</h3><p>Mapeamos desafios, processos e o estágio atual da empresa.</p></div><span class="step-symbol">↘</span></article><article class="method-step reveal"><span>02</span><div><h3>Organizar.</h3><p>Estruturamos rotinas e informações que precisam conversar entre si.</p></div><span class="step-symbol">↘</span></article><article class="method-step reveal"><span>03</span><div><h3>Evoluir.</h3><p>Usamos análises e indicadores para orientar os próximos passos.</p></div><span class="step-symbol">↗</span></article></div></div>
+    <section class="story-section story-left" id="manifesto" data-scene="globe" aria-labelledby="manifestoTitle">
+      <div class="story-panel">
+        <p class="eyebrow">Nosso jeito de enxergar o futuro.</p>
+        <h2 id="manifestoTitle">Mais visão.<br>Mais futuro.</h2>
+        <p class="body-copy">Acreditamos que clareza financeira abre possibilidades. Que uma rotina organizada dá espaço para novas ideias. E que informação só faz diferença quando ajuda a agir.</p>
+        <p class="body-copy">É por isso que conectamos pessoas, processos e tecnologia. Para construir, junto com você, uma empresa mais preparada para o que vem.</p>
+        <span class="signature">EDEN · Inteligência financeira</span>
+      </div>
     </section>
 
+    <section class="story-section solutions-section" id="solucoes" data-scene="ambient" aria-labelledby="servicesTitle">
+      <div class="story-panel solutions-intro">
+        <p class="eyebrow">Oito frentes. Uma visão conectada.</p>
+        <h2 id="servicesTitle">Seu financeiro.<br>Em sintonia.</h2>
+        <p class="body-copy">Da operação à estratégia, encontre as soluções que fazem sentido para o momento da sua empresa.</p>
+      </div>
+      <div class="service-carousel" role="region" aria-roledescription="carrossel" aria-label="Soluções financeiras EDEN">
+        <div class="carousel-heading"><span class="eyebrow">Explore nossas soluções</span><span id="serviceCounter" class="service-counter" aria-live="polite" aria-atomic="true">01 / 08</span></div>
+        <div class="service-deck" id="serviceDeck">
+          <article class="service-card is-active" aria-labelledby="serviceTitle1">
+            <span class="service-symbol" aria-hidden="true">↗</span><p class="eyebrow">Operação financeira</p>
+            <h3 id="serviceTitle1">BPO Financeiro</h3>
+            <p>Assumimos a rotina financeira da sua empresa para trazer organização, controle e mais tempo para cuidar do negócio.</p>
+            <ul><li>Contas a pagar e receber</li><li>Conciliação e gestão de contas bancárias</li><li>Controle e organização das movimentações</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=BPO%20Financeiro">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle2">
+            <span class="service-symbol" aria-hidden="true">⌁</span><p class="eyebrow">Caixa e previsibilidade</p>
+            <h3 id="serviceTitle2">Fluxo de Caixa<br>e Tesouraria</h3>
+            <p>Uma visão clara da posição financeira da sua empresa e das necessidades de caixa.</p>
+            <ul><li>Fluxo de caixa realizado e projetado</li><li>Controle de saldos, pagamentos e recebimentos</li><li>Projeções e relacionamento bancário</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Fluxo%20de%20Caixa%20e%20Tesouraria">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle3">
+            <span class="service-symbol" aria-hidden="true">◎</span><p class="eyebrow">Planejamento e metas</p>
+            <h3 id="serviceTitle3">Planejamento<br>Financeiro e Budget</h3>
+            <p>Transformamos os números em informações para apoiar decisões e planejar os próximos passos.</p>
+            <ul><li>Elaboração e acompanhamento de Budget</li><li>Orçado × realizado e análise de variações</li><li>Projeções, custos e planejamento de resultados</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Planejamento%20Financeiro%20e%20Budget">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle4">
+            <span class="service-symbol" aria-hidden="true">◈</span><p class="eyebrow">Desempenho e gestão</p>
+            <h3 id="serviceTitle4">Controladoria<br>e Indicadores</h3>
+            <p>Acompanhe o desempenho financeiro por meio de informações claras e indicadores relevantes.</p>
+            <ul><li>DRE gerencial, DFC e KPIs financeiros</li><li>Análise de resultados e centros de custos</li><li>Relatórios e apoio à tomada de decisão</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Controladoria%20e%20Indicadores">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle5">
+            <span class="service-symbol" aria-hidden="true">↙</span><p class="eyebrow">Recebíveis e crédito</p>
+            <h3 id="serviceTitle5">Contas a Receber<br>e Cobrança</h3>
+            <p>Mais controle sobre os valores a receber e uma rotina estruturada de acompanhamento.</p>
+            <ul><li>Gestão de recebíveis e inadimplência</li><li>Cobranças, renegociações e acordos</li><li>Análise de crédito e relatórios</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Contas%20a%20Receber%20e%20Cobran%C3%A7a">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle6">
+            <span class="service-symbol" aria-hidden="true">≡</span><p class="eyebrow">Faturamento e documentos</p>
+            <h3 id="serviceTitle6">Faturamento<br>e Apoio Fiscal</h3>
+            <p>Organização e controle das informações financeiras e fiscais que fazem parte da rotina da empresa.</p>
+            <ul><li>Emissão e conferência de notas e documentos</li><li>Controle de retenções e organização fiscal</li><li>Interface com o escritório contábil</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Faturamento%20e%20Apoio%20Fiscal">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle7">
+            <span class="service-symbol" aria-hidden="true">▥</span><p class="eyebrow">Relatórios e visibilidade</p>
+            <h3 id="serviceTitle7">Relatórios<br>Financeiros</h3>
+            <p>Informações organizadas para entender a saúde financeira do negócio e acompanhar sua evolução.</p>
+            <ul><li>Fluxo de caixa, DRE e indicadores</li><li>Contas a pagar, a receber e inadimplência</li><li>Custos, despesas e orçado × realizado</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Relat%C3%B3rios%20Financeiros">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+          <article class="service-card" aria-labelledby="serviceTitle8">
+            <span class="service-symbol" aria-hidden="true">⌘</span><p class="eyebrow">Tecnologia e automação</p>
+            <h3 id="serviceTitle8">Sistemas financeiros.<br>Sob medida.</h3>
+            <p>Desenvolvimento de Sistemas Financeiros Customizados para as necessidades de cada empresa.</p>
+            <ul><li>Automação de processos e rotinas financeiras</li><li>Integração com ERPs, bancos e APIs</li><li>Dashboards, aplicações e evolução de sistemas</li></ul>
+            <a class="text-link service-contact" href="contato.html?servico=Desenvolvimento%20de%20Sistemas%20Financeiros%20Customizados">Conversar sobre esta solução <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+          </article>
+        </div>
+        <div class="carousel-controls" hidden><button class="arrow-button" id="servicePrevious" type="button" aria-label="Solução anterior" aria-controls="serviceDeck">←</button><span>Encontre sua conexão.</span><button class="arrow-button" id="serviceNext" type="button" aria-label="Próxima solução" aria-controls="serviceDeck">→</button></div>
+      </div>
+    </section>
 
-    <section class="maturity" id="diagnostico" aria-labelledby="maturityTitle"><div class="maturity-glow" aria-hidden="true"></div><div class="maturity-grid" aria-hidden="true"></div><div class="wrap maturity-content"><div class="maturity-copy reveal"><p class="eyebrow eyebrow-light">UM PONTO DE PARTIDA</p><h2 id="maturityTitle">Qual é o estágio<br>da sua empresa?</h2><p>Descubra como está a maturidade financeira do seu negócio em uma avaliação orientativa de quatro perguntas.</p><button class="pill-button pill-white" type="button" data-open-quiz>Iniciar avaliação <span aria-hidden="true">↗</span></button></div><div class="maturity-graphic reveal" aria-hidden="true"><div class="maturity-bars"><i></i><i></i><i></i><i></i><i></i></div><div class="maturity-caption"><span>MATURIDADE FINANCEIRA</span><strong>05<span> / 05</span></strong></div><div class="maturity-orb"></div></div></div></section>
+    <section class="story-section diagnosis-section story-right" id="diagnostico" data-scene="ambient" aria-labelledby="diagnosisTitle">
+      <div class="diagnosis-pillars" aria-label="Pilares da gestão financeira"><span>Organizar.</span><span>Conectar.</span><span>Evoluir.</span></div>
+      <div class="story-panel">
+        <p class="eyebrow">Todo próximo passo tem um começo.</p>
+        <h2 id="diagnosisTitle">Onde sua<br>empresa está?</h2>
+        <p class="body-copy">Quatro perguntas para refletir sobre sua rotina financeira e descobrir por onde começar.</p>
+        <button class="button" type="button" data-open-quiz>Descubra seu estágio <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></button>
+        <p class="small-note">Avaliação orientativa. Não substitui uma análise profissional.</p>
+      </div>
+    </section>
 
-
-    <section class="faq section-padding" id="duvidas" aria-labelledby="faqTitle"><div class="wrap faq-layout"><div class="faq-heading reveal"><p class="eyebrow">PERGUNTAS FREQUENTES</p><h2 id="faqTitle">Tudo mais<br>simples.</h2><p>Respostas diretas para as dúvidas mais comuns.</p></div><div class="faq-list reveal"><details><summary>Qual é a diferença entre BPO financeiro e controladoria?<span class="faq-plus"></span></summary><p>O BPO organiza e executa a rotina financeira, incluindo pagamentos, recebimentos e conciliações. A controladoria analisa resultados, custos e indicadores para apoiar decisões.</p></details><details><summary>Preciso contratar todas as soluções?<span class="faq-plus"></span></summary><p>Não necessariamente. A estrutura adequada depende do estágio e das necessidades da sua empresa. Uma avaliação inicial ajuda a definir prioridades.</p></details><details><summary>O que é planejamento financeiro e Budget?<span class="faq-plus"></span></summary><p>É o processo de definir objetivos e projeções financeiras, acompanhar orçado x realizado e analisar desvios para orientar decisões.</p></details><details><summary>Como funciona a avaliação de maturidade?<span class="faq-plus"></span></summary><p>Você responde quatro perguntas sobre a sua rotina financeira. O resultado é ilustrativo e não substitui uma análise profissional.</p></details></div></div></section>
-
-
-    <section class="last-cta" id="conversar"><div class="last-glow" aria-hidden="true"></div><div class="wrap last-content reveal"><p class="eyebrow eyebrow-light">EDEN / PRÓXIMO PASSO</p><h2>O próximo capítulo<br><span>começa agora.</span></h2><p>Clareza para construir uma empresa cada vez mais preparada para o futuro.</p><button class="pill-button pill-white" type="button" data-open-contact>Vamos conversar <span aria-hidden="true">↗</span></button></div></section>
+    <section class="story-section story-center final-section" id="conversar" data-scene="ribbon" aria-labelledby="contactTitle">
+      <div class="story-panel final-copy">
+        <p class="eyebrow">O próximo capítulo é seu.</p>
+        <h2 id="contactTitle">Vamos mais<br>longe. Juntos.</h2>
+        <p class="body-copy">Uma nova perspectiva para o financeiro da sua empresa começa com uma conversa.</p>
+        <a class="button" href="contato.html">Agendar diagnóstico <svg class="arrow-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13 13 3M3 3h10v10" stroke="currentColor" stroke-width="1.4"/></svg></a>
+      </div>
+    </section>
   </main>
 
-  <footer class="footer"><div class="wrap footer-top"><a class="wordmark footer-wordmark" href="#inicio" aria-label="EDEN — voltar ao início"><svg class="eden-symbol" aria-hidden="true" viewBox="0 0 38 38" fill="none"><rect width="38" height="38" rx="11" fill="currentColor"/><path d="M24.5 11H14v16h10.5M14 19h8.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>EDEN<span class="wordmark-dot">.</span></span></a><div class="footer-links"><a href="#solucoes">Soluções</a><a href="#metodo">Método</a><a href="#duvidas">Dúvidas</a><button type="button" data-open-contact>Contato</button></div></div><div class="wrap footer-bottom"><span>© <span id="currentYear">2026</span> EDEN. Inteligência financeira.</span><span>Feito para enxergar mais longe. <a href="#topo">Voltar ao início ↑</a></span></div></footer>
+  <footer class="site-footer"><a class="wordmark" href="#inicio" aria-label="EDEN — voltar ao início">EDEN<span aria-hidden="true">.</span></a><p>© <span id="currentYear">2026</span> EDEN · Inteligência financeira</p><a class="footer-top" href="#inicio">Voltar ao início ↑</a></footer>
 
-
-  <dialog class="modal modal-quiz" id="quizModal" aria-labelledby="quizTitle"><div class="modal-head"><span class="modal-tag">AVALIAÇÃO ORIENTATIVA</span><button class="modal-close" type="button" data-close-modal aria-label="Fechar janela">×</button></div><div id="quizBody"><p class="quiz-count" id="quizCount">PERGUNTA 1 DE 4</p><div class="quiz-progress"><span id="quizProgress"></span></div><h2 id="quizTitle">Como sua empresa organiza o financeiro?</h2><p id="quizIntro">Selecione a opção que melhor descreve sua realidade.</p><div class="quiz-options" id="quizOptions"></div><div class="quiz-buttons"><button class="pill-button pill-outline" type="button" id="quizPrevious">Voltar</button><button class="pill-button pill-dark" type="button" id="quizNext" disabled>Continuar →</button></div></div></dialog>
-  <dialog class="modal modal-contact" id="contactModal" aria-labelledby="contactTitle"><div class="modal-head"><span class="modal-tag">CONTATO EDEN</span><button class="modal-close" type="button" data-close-modal aria-label="Fechar janela">×</button></div><h2 id="contactTitle">Vamos construir o próximo passo?</h2><p>Preencha os campos para preparar sua solicitação. A integração de envio ainda não está ativa.</p><form id="contactForm"><div class="field-row"><label>Nome<input type="text" name="nome" autocomplete="name" required maxlength="80" placeholder="Como podemos chamar você?"></label><label>E-mail<input type="email" name="email" autocomplete="email" required maxlength="120" placeholder="voce@empresa.com.br"></label></div><label>Empresa<input type="text" name="empresa" autocomplete="organization" required maxlength="110" placeholder="Nome da empresa"></label><label>Solução de interesse<select name="servico" required><option value="" selected disabled>Selecione</option><option>BPO Financeiro</option><option>Fluxo de Caixa e Tesouraria</option><option>Planejamento Financeiro e Budget</option><option>Controladoria e Indicadores</option><option>Contas a Receber e Cobrança</option><option>Faturamento e Apoio Fiscal</option><option>Relatórios Financeiros</option><option>Avaliação inicial</option><option>Ainda não sei</option></select></label><label>Mensagem<textarea name="mensagem" maxlength="900" rows="3" placeholder="Conte um pouco sobre o seu desafio (opcional)"></textarea></label><button class="pill-button pill-dark" type="submit">Preparar solicitação <span aria-hidden="true">↗</span></button><p class="form-result" id="formResult" role="status" aria-live="polite"></p><p class="form-legal">Os dados não são enviados a um servidor nesta versão. Ao clicar, você poderá copiar a mensagem preparada.</p></form></dialog>
+  <dialog class="quiz-dialog" id="quizModal" aria-labelledby="quizTitle" aria-describedby="quizNote">
+    <div class="quiz-top"><span class="eyebrow">Uma nova perspectiva</span><button class="dialog-close" type="button" aria-label="Fechar avaliação">×</button></div>
+    <div id="quizBody"><h2 id="quizTitle" tabindex="-1">Qual é o estágio da sua empresa?</h2><p>A avaliação está disponível com JavaScript habilitado.</p></div>
+    <p id="quizNote" class="small-note">Resultado orientativo, baseado nas suas respostas. Não é um diagnóstico profissional.</p>
+  </dialog>
 </body>
 </html>

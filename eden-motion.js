@@ -1,449 +1,328 @@
-(async () => {
-  "use strict";
-
-  const hero = document.querySelector("#inicio");
-  const original = document.querySelector("#edenParticles");
-  if (!hero || !original) return;
-
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const mobile = matchMedia("(max-width: 750px)").matches;
-
-  function fallback() {
-    document.documentElement.classList.add("eden-motion-fallback");
-    const script = document.createElement("script");
-    script.src = "eden-constellation.js?v=3.0";
-    document.body.append(script);
-  }
-
-  let THREE;
-
-  try {
-    THREE = await import(
-      "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
-    );
-  } catch (error) {
-    console.warn("WebGL indisponivel:", error);
-    fallback();
-    return;
-  }
-
-  const root = document.createElement("div");
-  root.id = "eden-motion-layer";
-  root.setAttribute("aria-hidden", "true");
-  document.body.prepend(root);
-
-  let renderer;
-
-  try {
-    renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: false,
-      powerPreference: mobile ? "low-power" : "high-performance"
-    });
-  } catch (error) {
-    root.remove();
-    fallback();
-    return;
-  }
-
-  renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(
-    Math.min(devicePixelRatio || 1, mobile ? 1.3 : 1.8)
-  );
-
-  root.append(renderer.domElement);
-
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, 1, .1, 100);
-  camera.position.z = 13;
-
-  const group = new THREE.Group();
-  scene.add(group);
-
-  const rand = (a, b) => a + Math.random() * (b - a);
-
-  const smooth = (a, b, v) => {
-    const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  };
-
-  const palette = [
-    0xd8b474, 0xf1d59e, 0x8daac8,
-    0x3e669a, 0xe9e6dc, 0xb38b51
-  ].map(c => new THREE.Color(c));
-
-  // Mascara da lampada
-  const mask = document.createElement("canvas");
-  mask.width = 520;
-  mask.height = 640;
-
-  const m = mask.getContext("2d", {
-    willReadFrequently: true
-  });
-
-  m.fillStyle = "#fff";
-  m.beginPath();
-  m.moveTo(260, 33);
-  m.bezierCurveTo(129, 33, 59, 132, 73, 252);
-  m.bezierCurveTo(78, 330, 128, 374, 165, 412);
-  m.bezierCurveTo(190, 439, 193, 450, 194, 464);
-  m.lineTo(326, 464);
-  m.bezierCurveTo(327, 450, 330, 439, 355, 412);
-  m.bezierCurveTo(392, 374, 442, 330, 447, 252);
-  m.bezierCurveTo(461, 132, 391, 33, 260, 33);
-  m.fill();
-
-  for (const [x, y, w, h] of [
-    [194, 458, 132, 113],
-    [213, 565, 94, 25],
-    [231, 584, 58, 21]
-  ]) {
-    m.fillRect(x, y, w, h);
-  }
-
-  const maskPixels = m.getImageData(0, 0, 520, 640).data;
-  const n = reduced ? 3000 : mobile ? 4200 : 11500;
-
-  const pos = new Float32Array(n * 3);
-  const target = new Float32Array(n * 3);
-  const colors = new Float32Array(n * 3);
-  const seeds = new Float32Array(n);
-  const sizes = new Float32Array(n);
-
-  for (let i = 0; i < n; i++) {
-    let x, y;
-
-    do {
-      x = rand(70, 448);
-      y = rand(35, 604);
-    } while (
-      maskPixels[
-        (Math.floor(y) * 520 + Math.floor(x)) * 4 + 3
-      ] < 100
-    );
-
-    const j = i * 3;
-
-    // Posicao inicial: lampada
-    pos[j] = (x - 260) / 96;
-    pos[j + 1] = (318 - y) / 138;
-    pos[j + 2] = rand(-.48, .48);
-
-    // Posicao final: constelacao 3D
-    const a = rand(0, Math.PI * 2);
-    const z = rand(-1, 1);
-    const surface = Math.random() < .82
-      ? rand(.87, 1.02)
-      : rand(.28, .92);
-
-    const r = Math.sqrt(1 - z * z) * surface;
-    const side = i % 2 ? -1 : 1;
-
-    target[j] = (
-      side * .54 + Math.cos(a) * r * .98
-    ) * 1.7;
-
-    target[j + 1] = z * r * .92 * 1.9;
-    target[j + 2] = Math.sin(a) * r * .9 + rand(-.12, .12);
-
-    const c = palette[Math.floor(rand(0, palette.length))];
-
-    colors[j] = c.r;
-    colors[j + 1] = c.g;
-    colors[j + 2] = c.b;
-
-    seeds[i] = rand(0, Math.PI * 2);
-    sizes[i] = rand(3.3, 8.4);
-  }
-
-  function buildGeometry(p, t, c, s, sizesArray) {
-    const g = new THREE.BufferGeometry();
-
-    g.setAttribute("position", new THREE.BufferAttribute(p, 3));
-    g.setAttribute("aTarget", new THREE.BufferAttribute(t, 3));
-    g.setAttribute("aColor", new THREE.BufferAttribute(c, 3));
-    g.setAttribute("aSeed", new THREE.BufferAttribute(s, 1));
-    g.setAttribute("aSize", new THREE.BufferAttribute(sizesArray, 1));
-
-    return g;
-  }
-
-  const uniforms = {
-    uTime: { value: 0 },
-    uMorph: { value: 0 },
-    uScatter: { value: 0 },
-    uOpacity: { value: 1 },
-    uPointer: { value: new THREE.Vector2(-9, -9) },
-    uPointerStrength: { value: 0 },
-    uPixelRatio: { value: renderer.getPixelRatio() }
-  };
-
-  const vertexShader = `
-    attribute vec3 aTarget;
-    attribute vec3 aColor;
-    attribute float aSeed;
-    attribute float aSize;
-
-    uniform float uTime, uMorph, uScatter;
-    uniform float uPixelRatio, uPointerStrength;
-    uniform vec2 uPointer;
-
-    varying vec3 vColor;
-    varying float vAlpha;
-
-    void main() {
-      vec3 p = mix(position, aTarget, uMorph);
-
-      p += vec3(
-        sin(uTime * .28 + aSeed),
-        cos(uTime * .22 + aSeed),
-        sin(uTime * .18 + aSeed)
-      ) * uScatter * .35;
-
-      vec4 mv = modelViewMatrix * vec4(p, 1.0);
-      vec4 clip = projectionMatrix * mv;
-
-      vec2 ndc = clip.xy / clip.w;
-      vec2 d = ndc - uPointer;
-
-      float dist = length(d);
-      float impact = pow(
-        1.0 - smoothstep(.0, .23, dist), 2.0
-      ) * uPointerStrength;
-
-      clip.xy += normalize(d + vec2(.0001))
-        * impact * .23 * clip.w;
-
-      gl_Position = clip;
-
-      gl_PointSize = clamp(
-        aSize * uPixelRatio * 13.0 / max(3.0, -mv.z),
-        2.1, 15.0
-      );
-
-      vColor = aColor;
-      vAlpha = .78 + (
-        .53 + .32 * sin(aSeed * 17.0)
-      ) * uPointerStrength * .12;
+/* EDEN — continuous procedural particle scenes. No model, CDN or runtime library. */
+(() => {
+  'use strict';
+  let canvas = document.getElementById('edenParticles');
+  const sections = [...document.querySelectorAll('.story-section[data-scene]')];
+  if (!canvas || !sections.length) return;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const compact = matchMedia('(max-width: 760px)').matches;
+  const count = compact ? 3600 : 14500;
+  const ambientCount = compact ? 38 : 85;
+  const total = count + ambientCount;
+  let state = 7321;
+  const random = () => { state = state * 16807 % 2147483647; return (state - 1) / 2147483646; };
+  const tau = Math.PI * 2;
+  const clamp = (n, a = 0, b = 1) => Math.min(b, Math.max(a, n));
+  const mix = (a, b, t) => a + (b - a) * t;
+  const smooth = t => t * t * (3 - 2 * t);
+  const color = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const gold = color('#edbe34'), white = color('#e8e3ef'), purple = color('#8951e9'), teal = color('#238d84'), navy = color('#456cae');
+  const palette = [gold, white, purple, teal, navy];
+  const points = Array.from({ length: total }, () => ({ u: random(), v: random(), w: random(), s: random() }));
+  const positions = {}, colors = {};
+  const data = new Float32Array(total * 4);
+  const landmasses = [
+    [[-168,66],[-135,73],[-105,72],[-58,52],[-81,25],[-98,18],[-117,31],[-125,49]],
+    [[-81,12],[-61,9],[-35,-7],[-45,-25],[-70,-56],[-78,-31]],
+    [[-19,35],[10,38],[35,31],[51,10],[40,-13],[20,-35],[9,-29],[-6,2]],
+    [[-10,36],[-9,58],[22,72],[57,67],[86,77],[142,61],[172,52],[134,29],[115,1],[98,8],[77,9],[54,29],[29,41]],
+    [[113,-12],[137,-10],[154,-23],[149,-39],[116,-35]],
+    [[-53,60],[-24,70],[-35,83],[-60,79]],
+    [[45,-13],[50,-12],[48,-25],[43,-26]]
+  ];
+  function inside(x, y, polygon) {
+    let hit = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const [xi, yi] = polygon[i], [xj, yj] = polygon[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) hit = !hit;
     }
-  `;
-
-  const fragmentShader = `
-    varying vec3 vColor;
-    varying float vAlpha;
-
-    uniform float uOpacity;
-
-    void main() {
-      vec2 p = gl_PointCoord * 2.0 - 1.0;
-
-      float floorEdge = p.y + .72;
-      float roofEdge = .86 - 1.7 * abs(p.x) - p.y;
-      float border = min(floorEdge, roofEdge);
-
-      if (border < .0) discard;
-
-      float edge = 1.0 - smoothstep(.08, .27, border);
-      float alpha = (edge * .89 + .10)
-        * vAlpha * uOpacity;
-
-      if (alpha < .012) discard;
-
-      gl_FragColor = vec4(vColor, alpha);
-    }
-  `;
-
-  function makeMaterial(u) {
-    return new THREE.ShaderMaterial({
-      uniforms: u,
-      vertexShader,
-      fragmentShader,
-      transparent: true,
-      depthWrite: false,
-      depthTest: false,
-      blending: THREE.AdditiveBlending
-    });
+    return hit;
   }
-
-  const cloud = new THREE.Points(
-    buildGeometry(pos, target, colors, seeds, sizes),
-    makeMaterial(uniforms)
-  );
-
-  group.add(cloud);
-
-  // Particulas ambientais espalhadas pela pagina
-  const count = mobile ? 115 : 330;
-
-  const bp = new Float32Array(count * 3);
-  const bc = new Float32Array(count * 3);
-  const bs = new Float32Array(count);
-  const bz = new Float32Array(count);
-
-  for (let i = 0; i < count; i++) {
-    const j = i * 3;
-
-    bp[j] = rand(-13, 13);
-    bp[j + 1] = rand(-6.8, 6.8);
-    bp[j + 2] = rand(-4, -1);
-
-    const c = palette[Math.floor(rand(0, palette.length))];
-
-    bc[j] = c.r;
-    bc[j + 1] = c.g;
-    bc[j + 2] = c.b;
-
-    bs[i] = rand(0, 7);
-    bz[i] = rand(2, 8);
-  }
-
-  const bgUniforms = {
-    ...uniforms,
-    uOpacity: { value: .16 },
-    uScatter: { value: .8 },
-    uPointerStrength: { value: 0 }
-  };
-
-  const bg = new THREE.Points(
-    buildGeometry(bp, bp.slice(), bc, bs, bz),
-    makeMaterial(bgUniforms)
-  );
-
-  scene.add(bg);
-
-  let scroll = 0;
-  let mouseX = 0;
-  let mouseY = 0;
-  let mouseOn = false;
-  let last = 0;
-
-  function resize() {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(innerWidth, innerHeight, false);
-    uniforms.uPixelRatio.value = renderer.getPixelRatio();
-  }
-
-  addEventListener("resize", resize, { passive: true });
-  resize();
-
-  addEventListener("pointermove", e => {
-    if (e.pointerType === "touch") return;
-
-    mouseX = e.clientX / innerWidth * 2 - 1;
-    mouseY = 1 - e.clientY / innerHeight * 2;
-    mouseOn = true;
-  }, { passive: true });
-
-  addEventListener("pointerout", e => {
-    if (!e.relatedTarget) mouseOn = false;
-  });
-
-  addEventListener("scroll", () => {
-    scroll = scrollY / Math.max(1, innerHeight);
-  }, { passive: true });
-
-  scroll = scrollY / Math.max(1, innerHeight);
-
-  function animate(now) {
-    if (!reduced) requestAnimationFrame(animate);
-    if (document.hidden) return;
-    if (mobile && now - last < 28) return;
-
-    last = now;
-
-    const clock = reduced ? 0 : now * .001;
-    const morph = smooth(.45, 1.7, scroll);
-
-    uniforms.uTime.value = clock;
-    uniforms.uMorph.value = morph;
-    uniforms.uScatter.value = reduced
-      ? 0
-      : Math.min(.5, .10 + scroll * .08);
-
-    uniforms.uOpacity.value =
-      1 - .78 * smooth(1.4, 2.9, scroll);
-
-    bgUniforms.uTime.value = clock;
-
-    // Transformacao e movimento durante o scroll
-    const x = mobile
-      ? 0
-      : 3.9 - 5.9 * smooth(.4, 2.2, scroll)
-        + 2.3 * Math.sin(Math.max(0, scroll - 2.2) * .47);
-
-    const y = mobile
-      ? -1.8
-      : -.1 + 1.1 * smooth(.5, 2.1, scroll)
-        + .45 * Math.sin(scroll * .56);
-
-    group.position.x += (x - group.position.x) * .055;
-    group.position.y += (y - group.position.y) * .055;
-
-    const size = (mobile ? 1.2 : 1.9)
-      * (1 - .26 * smooth(.45, 1.8, scroll));
-
-    group.scale.setScalar(size);
-    group.rotation.y = clock * .046 + mouseX * .095;
-    group.rotation.x = mouseY * .065;
-
-    // Parallax do fundo
-    bg.position.x += (
-      mouseX * -.28 - bg.position.x
-    ) * .026;
-
-    bg.position.y += (
-      mouseY * -.20 - bg.position.y
-    ) * .026;
-
-    uniforms.uPointer.value.set(
-      mouseOn ? mouseX : -9,
-      mouseOn ? mouseY : -9
-    );
-
-    uniforms.uPointerStrength.value += (
-      (mouseOn ? 1 : 0) -
-      uniforms.uPointerStrength.value
-    ) * .08;
-
-    renderer.render(scene, camera);
-  }
-
-  requestAnimationFrame(animate);
-
-  // Entradas animadas durante a rolagem
-  if (!reduced && "IntersectionObserver" in window) {
-    const reveal = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add("eden-motion-visible");
-          reveal.unobserve(e.target);
-        }
-      });
-    }, {
-      threshold: .12,
-      rootMargin: "0px 0px -25px 0px"
-    });
-
-    const selector = [
-      ".section-heading",
-      ".eden-tech-intro",
-      ".method-step",
-      ".experience-selector",
-      ".maturity-copy",
-      ".last-content"
-    ].join(",");
-
-    document.querySelectorAll(selector).forEach((el, i) => {
-      if (el.getBoundingClientRect().top > innerHeight * .8) {
-        el.classList.add("eden-motion-reveal");
-        el.style.setProperty(
-          "--motion-delay",
-          `${i % 3 * 100}ms`
-        );
-        reveal.observe(el);
+  function surface(name, i, p) {
+    const u = p.u * tau, z = 2 * p.v - 1, r = Math.sqrt(1 - z * z);
+    const sx = Math.cos(u) * r, sz = Math.sin(u) * r;
+    if (name === 'brain') {
+      if (i % 29 === 0) { // A subtle brainstem below the folded cortex.
+        return [(p.u - .5) * .19 + .32, -.73 - p.v * .56, (p.w - .5) * .19];
       }
-    });
+      const folds = .055 * Math.sin(u * 11 + z * 12) + .035 * Math.cos(u * 17 - z * 19);
+      const groove = Math.pow(Math.abs(Math.sin(u * 5 + z * 7 + .5 * Math.sin(z * 8))), 12) * .075;
+      const radius = 1 + folds - groove;
+      const fissure = 1 - .1 * Math.exp(-sz * sz * 100);
+      return [sx * 1.24 * radius, (z * .9 + .09 * Math.cos(u * 2)) * radius * fissure, sz * .73 * radius];
+    }
+    if (name === 'bulb') {
+      if (p.v < .72) {
+        const yy = 1.1 - p.v / .72 * 1.7;
+        const rr = yy >= -.15
+          ? .8 * Math.sqrt(Math.max(0, 1 - ((yy - .3) / .8) ** 2))
+          : mix(.6614, .27, smooth(clamp((-.15 - yy) / .45)));
+        return [Math.cos(u) * rr, yy, Math.sin(u) * rr];
+      }
+      const t = (p.v - .72) / .28;
+      const rr = t < .75 ? .27 + .024 * Math.sin(t * 54) : .27 * Math.sqrt((1 - t) / .25);
+      return [Math.cos(u) * rr, -.6 - t * .65, Math.sin(u) * rr];
+    }
+    if (name === 'globe') return [sx, z, sz];
+    if (name === 'ribbon') {
+      const t = p.u * tau * 1.75;
+      const band = (p.v - .5) * .9;
+      const rad = .46 + band * Math.cos(t * .65);
+      return [Math.cos(t) * rad, (p.u - .5) * 2.6 + band * Math.sin(t * .65), Math.sin(t) * rad];
+    }
+    // Dispersed points maintain their identities throughout every transition.
+    return [(p.u - .5) * 4.6, (p.v - .5) * 3.1, (p.w - .5) * 2.8];
+  }
+  for (const name of ['brain', 'scatter', 'bulb', 'globe', 'ribbon', 'ambient']) {
+    const xyz = new Float32Array(total * 3), rgb = new Float32Array(total * 3);
+    for (let i = 0; i < total; i++) {
+      const p = points[i];
+      let pos = surface(name, i, p);
+      const patch = Math.sin(p.u * 24 + p.v * 13) + Math.cos(p.v * 27 - p.u * 8);
+      let c = patch > .8 ? gold : patch < -1 ? purple : patch < -.4 ? teal : white;
+      let brightness = .8;
+      if (name === 'bulb') {
+        c = pos[1] > .58 ? gold : pos[1] < -.75 ? teal : pos[1] < -.33 ? purple : white;
+      } else if (name === 'globe') {
+        const lon = p.u * 360 - 180, lat = Math.asin(p.v * 2 - 1) * 180 / Math.PI;
+        const land = landmasses.some(poly => inside(lon, lat, poly));
+        c = land ? palette[Math.floor(p.w * palette.length)] : navy;
+        brightness = land ? 1 : .13;
+      } else if (name === 'ribbon') {
+        c = palette[Math.min(4, Math.floor(p.u * 5))];
+        brightness = .45;
+      } else if (name === 'ambient') brightness = .28;
+      if (i >= count) {
+        pos = [(p.u - .5) * 2.2, (p.v - .5) * 2.2, p.w];
+        c = palette[i % palette.length]; brightness = 1;
+      }
+      xyz.set(pos, i * 3); rgb.set(c.map(v => v * brightness), i * 3);
+    }
+    positions[name] = xyz; colors[name] = rgb;
+  }
+  for (let i = 0; i < total; i++) {
+    const p = points[i];
+    data.set([p.w, i < count ? (compact ? 6 + p.s * 5 : 10 + p.s * 8) : (compact ? 8 + p.s * 22 : 15 + p.s * 37), p.u * tau, i >= count ? 1 : 0], i * 4);
+  }
+  let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, pair = '';
+  let renderer, isWebGL = false;
+  let pointer = [-9, -9], targetPointer = [-9, -9];
+  const scenes = {
+    'brain-right': { shape: 'brain', x: .72, y: .53, size: .92, ry: -.2, rz: .04, opacity: 1 },
+    'brain-left': { shape: 'brain', x: .27, y: .54, size: 1, ry: .5, rz: -.05, opacity: 1 },
+    scatter: { shape: 'scatter', x: .5, y: .5, size: 1.25, ry: .1, rz: 0, opacity: .58 },
+    bulb: { shape: 'bulb', x: .29, y: .53, size: .89, ry: .2, rz: .3, opacity: 1 },
+    globe: { shape: 'globe', x: .74, y: .56, size: 1.15, ry: -.6, rz: -.1, opacity: 1 },
+    ambient: { shape: 'ambient', x: .5, y: .5, size: 1.4, ry: .3, rz: 0, opacity: .35 },
+    ribbon: { shape: 'ribbon', x: .5, y: .5, size: .92, ry: .4, rz: -.2, opacity: .48 }
+  };
+  function sceneAt(scroll) {
+    let i = 0;
+    while (i < stops.length - 1 && scroll > stops[i + 1].at) i++;
+    const a = stops[i], b = stops[Math.min(i + 1, stops.length - 1)];
+    const progress = a === b ? 0 : clamp((scroll - a.at) / Math.max(1, b.at - a.at));
+    return { aSection: a.element, bSection: b.element, a: scenes[a.name], b: scenes[b.name], t: smooth(clamp((progress - .12) / .76)), name: progress < .5 ? a.name : b.name };
+  }
+  const vertex = `
+    precision highp float;
+    attribute vec3 aFrom, aTo, aColorFrom, aColorTo;
+    attribute vec4 aData;
+    uniform vec2 uViewport, uCenter, uPointer;
+    uniform float uMix, uTime, uScale, uDpr, uRotateY, uRotateZ, uOpacity;
+    varying vec3 vColor;
+    varying float vAlpha, vAngle;
+    void main() {
+      vec3 p = mix(aFrom, aTo, uMix);
+      float t = uTime;
+      if (aData.w > .5) {
+        p.xy += vec2(sin(t * .18 + aData.z), cos(t * .13 + aData.z)) * .035;
+        gl_Position = vec4(p.x, p.y, 0., 1.);
+        gl_PointSize = aData.y * uDpr;
+        vAlpha = .12 + aData.x * .3;
+      } else {
+        float cy = cos(uRotateY), sy = sin(uRotateY);
+        p.xz = mat2(cy, -sy, sy, cy) * p.xz;
+        float cz = cos(uRotateZ), sz = sin(uRotateZ);
+        p.xy = mat2(cz, sz, -sz, cz) * p.xy;
+        p += vec3(sin(t * .45 + aData.z), cos(t * .3 + aData.z), 0.) * .008;
+        float perspective = 4.5 / (4.5 - p.z);
+        vec2 pixel = uCenter + vec2(p.x, -p.y) * uScale * perspective;
+        vec2 delta = pixel - uPointer;
+        float dist = length(delta);
+        pixel += normalize(delta + .001) * pow(1. - smoothstep(0., 110., dist), 2.) * 25.;
+        vec2 clip = pixel / uViewport * 2. - 1.;
+        gl_Position = vec4(clip.x, -clip.y, 0., 1.);
+        gl_PointSize = aData.y * uDpr * perspective;
+        vAlpha = clamp(.68 + p.z * .45, .22, 1.) * uOpacity;
+      }
+      vAngle = aData.z + t * .035;
+      vColor = mix(aColorFrom, aColorTo, uMix);
+    }
+  `;
+  const fragment = `
+    precision mediump float;
+    varying vec3 vColor;
+    varying float vAlpha, vAngle;
+    void main() {
+      vec2 p = (gl_PointCoord - .5) * 2.8;
+      float c = cos(vAngle), s = sin(vAngle);
+      p = mat2(c, -s, s, c) * p;
+      float edge = min(p.y + .48, (.94 - p.y - 1.73205 * abs(p.x)) * .5);
+      if (edge < -.035) discard;
+      float outer = smoothstep(-.035, .025, edge);
+      float line = 1. - smoothstep(.045, .21, edge);
+      gl_FragColor = vec4(vColor, outer * (line * .94 + .045) * vAlpha);
+    }
+  `;
+  function webglRenderer(gl) {
+    function shader(type, source) {
+      const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    }
+    const program = gl.createProgram();
+    gl.attachShader(program, shader(gl.VERTEX_SHADER, vertex)); gl.attachShader(program, shader(gl.FRAGMENT_SHADER, fragment));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+    gl.useProgram(program);
+    const uniforms = Object.fromEntries(['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'RotateY', 'RotateZ', 'Opacity'].map(name => [name, gl.getUniformLocation(program, 'u' + name)]));
+    const buffers = {};
+    for (const name of ['From', 'To', 'ColorFrom', 'ColorTo', 'Data']) {
+      const buffer = gl.createBuffer(), location = gl.getAttribLocation(program, 'a' + name);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.enableVertexAttribArray(location);
+      gl.vertexAttribPointer(location, name === 'Data' ? 4 : 3, gl.FLOAT, false, 0, 0);
+      if (name === 'Data') gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      buffers[name] = buffer;
+    }
+    gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.clearColor(0, 0, 0, 0);
+    return params => {
+      const { a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time } = params;
+      const key = a.shape + ':' + b.shape;
+      if (pair !== key) {
+        for (const [name, array] of [['From', positions[a.shape]], ['To', positions[b.shape]], ['ColorFrom', colors[a.shape]], ['ColorTo', colors[b.shape]]]) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffers[name]); gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
+        }
+        pair = key;
+      }
+      gl.viewport(0, 0, canvas.width, canvas.height); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Center, cx, cy);
+      gl.uniform2f(uniforms.Pointer, pointer[0], pointer[1]);
+      for (const [name, value] of [['Mix', t], ['Time', time], ['Scale', scale], ['Dpr', dpr], ['RotateY', rotationY], ['RotateZ', rotationZ], ['Opacity', opacity]]) gl.uniform1f(uniforms[name], value);
+      gl.drawArrays(gl.POINTS, 0, total);
+    };
+  }
+  function canvasRenderer(ctx) {
+    const stride = compact ? 3 : 4;
+    return ({ a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time }) => {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
+      const ca = Math.cos(rotationY), sa = Math.sin(rotationY), cr = Math.cos(rotationZ), sr = Math.sin(rotationZ);
+      for (let i = 0; i < total; i += i >= count ? 1 : stride) {
+        const index = i * 3, p = points[i], ambient = i >= count;
+        let x = mix(positions[a.shape][index], positions[b.shape][index], t);
+        let y = mix(positions[a.shape][index + 1], positions[b.shape][index + 1], t);
+        const z0 = mix(positions[a.shape][index + 2], positions[b.shape][index + 2], t);
+        const z = z0 * ca - x * sa; x = x * ca + z0 * sa;
+        const rotatedX = x * cr - y * sr; y = x * sr + y * cr;
+        const perspective = 4.5 / (4.5 - z);
+        let px = ambient ? p.u * width : cx + rotatedX * scale * perspective;
+        let py = ambient ? p.v * height : cy - y * scale * perspective;
+        const dx = px - pointer[0], dy = py - pointer[1], distance = Math.hypot(dx, dy);
+        if (!ambient && !reduced.matches && distance > 0 && distance < 110) {
+          const force = (1 - distance / 110) ** 2 * 25;
+          px += dx / distance * force; py += dy / distance * force;
+        }
+        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective);
+        const rgb = [0, 1, 2].map(k => Math.round(clamp(mix(colors[a.shape][index + k], colors[b.shape][index + k], t)) * 255));
+        ctx.strokeStyle = `rgb(${rgb.join(',')})`; ctx.lineWidth = .7;
+        ctx.globalAlpha = ambient ? .25 : clamp(.5 + z * .42, .08, 1) * opacity;
+        ctx.beginPath();
+        for (let j = 0; j < 3; j++) {
+          const angle = j * tau / 3 + p.u * tau + time * .035;
+          const tx = px + Math.cos(angle) * size, ty = py + Math.sin(angle) * size;
+          if (!j) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+        }
+        ctx.closePath(); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    };
+  }
+  function init() {
+    let gl = null;
+    try { gl = canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: 'low-power', premultipliedAlpha: true }); } catch (_) { /* Canvas is a supported fallback. */ }
+    if (gl) {
+      try { renderer = webglRenderer(gl); isWebGL = true; } catch (error) { console.warn('EDEN: renderização indisponível', error); }
+    }
+    if (!renderer) {
+      // A canvas with a WebGL context cannot acquire a 2D context.
+      if (gl) {
+        const replacement = canvas.cloneNode(false);
+        canvas.replaceWith(replacement); canvas = replacement;
+      }
+      const ctx = canvas.getContext('2d'); if (ctx) renderer = canvasRenderer(ctx);
+    }
+    if (!renderer) { document.documentElement.classList.add('art-unavailable'); return; }
+    canvas.dataset.renderer = isWebGL ? 'webgl' : 'canvas';
+    resize(); restart();
+  }
+  function measureStops() {
+    stops = sections.map(section => ({ name: section.dataset.scene, element: section, at: section.getBoundingClientRect().top + scrollY }));
+  }
+  function resize() {
+    width = innerWidth; height = innerHeight; dpr = Math.min(devicePixelRatio || 1, compact ? 1.5 : 1.75);
+    canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
+    measureStops();
+    draw(performance.now());
+  }
+  function draw(now) {
+    if (!renderer || !stops.length) return;
+    const { a, b, t, name, aSection, bSection } = sceneAt(scrollY);
+    const mobile = width <= 760;
+    const time = reduced.matches ? 0 : now * .001;
+    const cx = mobile ? width * .5 : width * mix(a.x, b.x, t);
+    let cy = height * mix(a.y, b.y, t);
+    const scale = mobile ? Math.min(width * .39, height * .23) * mix(a.size, b.size, t) : Math.min(width * .275, height * .445) * mix(a.size, b.size, t);
+    if (mobile) {
+      const artCenter = (section, scene) => {
+        if (scene.shape === 'scatter' || scene.shape === 'ambient') return height * .52;
+        const panel = section.querySelector('.story-panel');
+        return (panel?.getBoundingClientRect().bottom || height * .5) + 45 + scale * 1.15;
+      };
+      cy = mix(artCenter(aSection, a), artCenter(bSection, b), t);
+    }
+    const rotationY = mix(a.ry, b.ry, t) + (reduced.matches ? 0 : Math.sin(time * .13) * .12);
+    const rotationZ = mix(a.rz, b.rz, t);
+    const opacity = mix(a.opacity, b.opacity, t);
+    if (reduced.matches) pointer = [-9999, -9999];
+    else pointer = pointer.map((value, i) => mix(value, targetPointer[i], .12));
+    renderer({ a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time });
+    canvas.dataset.scene = name;
+    document.documentElement.dataset.artReady = 'true';
+  }
+  function animate(now) {
+    frame = requestAnimationFrame(animate);
+    if (document.hidden || now - last < (compact ? 32 : 24)) return;
+    last = now; draw(now);
+  }
+  function restart() {
+    cancelAnimationFrame(frame); frame = 0;
+    if (document.hidden || !renderer) return;
+    last = 0; draw(performance.now());
+    if (!reduced.matches) frame = requestAnimationFrame(animate);
+  }
+  addEventListener('pointermove', e => { if (e.pointerType !== 'touch') targetPointer = [e.clientX, e.clientY]; }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => { targetPointer = [-9999, -9999]; });
+  addEventListener('scroll', () => { if (reduced.matches) draw(performance.now()); }, { passive: true });
+  addEventListener('resize', resize, { passive: true });
+  document.addEventListener('visibilitychange', restart);
+  reduced.addEventListener('change', restart);
+  canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); cancelAnimationFrame(frame); canvas.dataset.renderer = 'context-lost'; });
+  canvas.addEventListener('webglcontextrestored', () => { pair = ''; init(); });
+  init();
+  // The service carousel changes section heights after the deferred UI script runs.
+  // Keep scroll anchors current after layout, font, orientation or viewport changes.
+  if ('ResizeObserver' in window) {
+    const layout = new ResizeObserver(() => { measureStops(); draw(performance.now()); });
+    sections.forEach(section => layout.observe(section));
   }
 })();
