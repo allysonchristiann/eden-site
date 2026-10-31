@@ -25,8 +25,8 @@
   // Preserve point identities, but never derive the diffuse field from the lamp's UVs.
   // Reusing p.v with the opposite Y direction made the entire cloud collapse to a line.
   for (const point of points) { point.fx = random(); point.fy = random(); point.fz = random(); }
-  const logoPixels = await sampleBrand();
-  if (!logoPixels.length) { document.documentElement.classList.add('art-unavailable'); return; }
+  const [logoPixels, growthPixels] = await Promise.all([sampleBrand(), sampleGrowth()]);
+  if (!logoPixels.length || !growthPixels.bars.length || !growthPixels.arrow.length) { document.documentElement.classList.add('art-unavailable'); return; }
   const positions = {}, colors = {}, data = new Float32Array(total * 4);
   const blendColor = (a, b, t) => a.map((value, i) => mix(value, b[i], smooth(clamp(t))));
   async function sampleBrand() {
@@ -56,6 +56,29 @@
     }
     return ink;
   }
+  async function sampleGrowth() {
+    const mask = document.createElement('canvas'); mask.width = 600; mask.height = 420;
+    const ctx = mask.getContext('2d', { willReadFrequently: true });
+    const bars = [], arrow = [];
+    if (!ctx) return { bars, arrow };
+    try {
+      const image = new Image();
+      await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = new URL('eden-growth.svg', document.baseURI).href; });
+      ctx.drawImage(image, 0, 0, 600, 420);
+      const pixels = ctx.getImageData(0, 0, 600, 420).data;
+      for (let y = 0; y < 420; y++) for (let x = 0; x < 600; x++) {
+        const j = (y * 600 + x) * 4, r = pixels[j], g = pixels[j + 1], b = pixels[j + 2], alpha = pixels[j + 3];
+        const point = { x: x + .5, y: y + .5, r, g, b };
+        if (alpha > 125 && r > 110 && r > b * 1.15) arrow.push(point);
+        else if (alpha > 45 && b > r + 8) bars.push(point);
+      }
+    } catch (_) { /* The visible SVG fallback remains available. */ }
+    return { bars, arrow };
+  }
+  function growthPixel(p) {
+    const pool = p.s < .32 ? growthPixels.arrow : growthPixels.bars;
+    return pool[Math.min(pool.length - 1, Math.floor(p.u * pool.length))];
+  }
   function surface(name, p) {
     const u = p.u * tau;
     if (name === 'bulb') {
@@ -68,6 +91,10 @@
       const r = t < .75 ? .25 + .02 * Math.sin(t * 54) : .25 * Math.sqrt((1 - t) / .25);
       return [Math.cos(u) * r, -.85 - t * .45, Math.sin(u) * r];
     }
+    if (name === 'growth') {
+      const pixel = growthPixel(p);
+      return [(pixel.x - 300) / 300, (210 - pixel.y) / 300, (p.w - .5) * .09];
+    }
     if (name === 'logo') {
       const pixel = logoPixels[Math.min(logoPixels.length - 1, Math.floor(p.s * logoPixels.length))];
       return [(pixel.x / 512 - .5) * 2, (.5 - pixel.y / 512) * 2, (p.w - .5) * .055];
@@ -78,7 +105,7 @@
     const radius = Math.cbrt(.08 + p.fz * .92);
     return [Math.cos(angle) * shell * radius * 2.65, latitude * radius * 1.8, Math.sin(angle) * shell * radius * 2.05];
   }
-  for (const name of ['bulb', 'scatter', 'logo', 'ambient']) {
+  for (const name of ['bulb', 'scatter', 'growth', 'logo', 'ambient']) {
     const xyz = new Float32Array(total * 3), rgb = new Float32Array(total * 3);
     for (let i = 0; i < total; i++) {
       const p = points[i];
@@ -91,6 +118,9 @@
         c = y > .35 ? blendColor(white, gold, (y - .35) / .7)
           : y > -.55 ? blendColor(purple, white, (y + .55) / .9)
           : blendColor(teal, purple, (y + 1.25) / .7);
+      }
+      if (name === 'growth') {
+        const pixel = growthPixel(p); c = [pixel.r / 255, pixel.g / 255, pixel.b / 255]; brightness = 1;
       }
       if (name === 'logo') {
         const pixel = logoPixels[Math.min(logoPixels.length - 1, Math.floor(p.s * logoPixels.length))];
@@ -109,17 +139,43 @@
   const scenes = {
     'bulb-right': { shape: 'bulb', x: .74, y: .51, size: .8, ry: -.08, rz: .34, opacity: 1, density: 1 },
     scatter: { shape: 'scatter', x: .5, y: .5, size: 1.2, ry: .1, rz: 0, opacity: .46, density: .65 },
-    bulb: { shape: 'bulb', x: .29, y: .50, size: .84, ry: .14, rz: .40, opacity: 1, density: 1 },
+    growth: { shape: 'growth', x: .29, y: .56, size: .92, ry: -.05, rz: 0, opacity: 1, density: 1 },
     ambient: { shape: 'ambient', x: .5, y: .5, size: 1.2, ry: .1, rz: 0, opacity: .46, density: .65 },
     ribbon: { shape: 'logo', x: .74, y: .53, size: .66, ry: 0, rz: 0, opacity: 1, density: 1 }
   };
+  function actorBounds(scene) {
+    if (scene.shape === 'scatter' || scene.shape === 'ambient') return null;
+    const xyz = positions[scene.shape], cy = Math.cos(scene.ry), sy = Math.sin(scene.ry), cz = Math.cos(scene.rz), sz = Math.sin(scene.rz);
+    const bounds = { left: Infinity, right: -Infinity, bottom: Infinity, top: -Infinity };
+    for (let i = 0; i < count; i++) {
+      const j = i * 3, x = xyz[j] * cy + xyz[j + 2] * sy, z = xyz[j + 2] * cy - xyz[j] * sy;
+      const y = xyz[j + 1], perspective = 4.5 / (4.5 - z);
+      const px = (x * cz - y * sz) * perspective, py = (x * sz + y * cz) * perspective;
+      bounds.left = Math.min(bounds.left, px); bounds.right = Math.max(bounds.right, px);
+      bounds.bottom = Math.min(bounds.bottom, py); bounds.top = Math.max(bounds.top, py);
+    }
+    bounds.left -= .07; bounds.right += .07; bounds.bottom -= .08; bounds.top += .08;
+    return bounds;
+  }
+  for (const scene of Object.values(scenes)) scene.bounds = actorBounds(scene);
+  function fitActor(a, b, progress, mobile) {
+    const from = a.bounds || b.bounds, to = b.bounds || a.bounds;
+    if (!from || !to) return;
+    const left = mix(from.left, to.left, progress), right = mix(from.right, to.right, progress);
+    const top = mix(from.top, to.top, progress), bottom = mix(from.bottom, to.bottom, progress);
+    const side = mobile ? 22 : 34;
+    const maxWidth = Math.min((params.cx - side) / Math.max(.01, -left), (width - side - params.cx) / Math.max(.01, right));
+    const safeTop = headerHeight + 28, safeBottom = height - 32;
+    params.scale = Math.min(params.scale, maxWidth, (safeBottom - safeTop) / Math.max(.1, top - bottom));
+    if (!mobile) params.cy = clamp(params.cy, safeTop + top * params.scale, safeBottom + bottom * params.scale);
+  }
   let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, shapePair = '';
   let renderer = null, atmosphere = null, isWebGL = false, contextLost = false, layoutFrame = 0;
   let quality = 1, slowTime = 0, lastQualityChange = 0, frameInterval = 16.67;
   let pointerX = 0, pointerY = 0, targetX = 0, targetY = 0, pointerOn = false, pointerStrength = 0;
-  let cameraX = 0, cameraY = 0, visualScroll = scrollY, timelineTime = 0;
-  const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, opacity: 1, density: 1, flow: 0, transition: 0, pose: 0, scroll: 0, time: 0, logo: 0, actorOpacity: 1, drawCount: count };
-  let artReady = false, activeScene = '';
+  let cameraX = 0, cameraY = 0, visualScroll = scrollY, timelineTime = 0, logoTime = 0, headerHeight = 88;
+  const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, opacity: 1, density: 1, flow: 0, transition: 0, pose: 0, scroll: 0, time: 0, logo: 0, growth: 0, buildLogo: 0, buildGrowth: 0, actorOpacity: 1, drawCount: count };
+  let artReady = false, activeScene = '', logoState = '';
   function sceneAt(scroll) {
     let i = 0;
     while (i < stops.length - 1 && scroll > stops[i + 1].at) i++;
@@ -127,8 +183,8 @@
     const progress = from === to ? 0 : clamp((scroll - from.at) / Math.max(1, to.at - from.at));
     params.a = scenes[from.name]; params.b = scenes[to.name];
     // Hold a coherent silhouette, then release/gather; never stretch it for an entire scene.
-    const dispersing = params.a.shape === 'bulb' && params.b.shape !== 'bulb';
-    const gathering = params.b.shape === 'bulb' && params.a.shape !== 'bulb';
+    const dispersing = !['scatter', 'ambient'].includes(params.a.shape) && ['scatter', 'ambient'].includes(params.b.shape);
+    const gathering = !['scatter', 'ambient'].includes(params.b.shape) && ['scatter', 'ambient'].includes(params.a.shape);
     params.t = smooth(clamp((progress - (dispersing ? .29 : gathering ? .12 : .18)) / (dispersing ? .56 : gathering ? .74 : .66)));
     params.pose = smooth(clamp((progress - .05) / .82));
     params.transition = params.a.shape !== params.b.shape ? 1 : 0;
@@ -144,21 +200,27 @@
     uniform vec2 uViewport, uCenter, uPointer;
     uniform vec4 uRotation;
     uniform vec2 uTilt;
-    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField, uLogo;
+    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField, uLogo, uGrowth, uBuildLogo, uBuildGrowth, uHeader;
     varying vec3 vColor;
     varying vec2 vSpin, vTilt;
     varying float vAlpha;
     void main() {
-      float stagger = aData.x * .22 * uTransition;
-      float localMix = clamp((uMix - stagger) / (1. - .22 * uTransition), 0., 1.);
+      float staggerRange = mix(.22, .42, max(uBuildLogo, uBuildGrowth)) * uTransition;
+      float arrival = mix(aData.x, aData.x * .65 + clamp(.5 - aTo.y * .5, 0., 1.) * .35, uBuildLogo);
+      arrival = mix(arrival, aData.x * .55 + clamp(.5 + aTo.x * .5, 0., 1.) * .45, uBuildGrowth);
+      float stagger = arrival * staggerRange;
+      float localMix = clamp((uMix - stagger) / (1. - staggerRange), 0., 1.);
       localMix = localMix * localMix * (3. - 2. * localMix);
-      vec3 p = mix(aFrom, aTo, localMix);
+      vec3 target = aTo;
+      target.y = mix(aTo.y, mix(-.466667, aTo.y, smoothstep(.2, .85, localMix)), uBuildGrowth);
+      vec3 p = mix(aFrom, target, localMix);
       float path = sin(localMix * 3.14159265) * uTransition;
       // Curved trajectories unfold across depth before settling into the next form.
       float winding = aData.z + localMix * 2.4;
-      p += vec3(sin(winding), cos(winding * 1.3), sin(winding * .8 + aData.x * 5.)) * path * .33;
+      p += vec3(sin(winding), cos(winding * 1.3), sin(winding * .8 + aData.x * 5.)) * path * mix(.33, .55, uBuildLogo);
       float drift = (.009 + uFlow * .055) * mix(1., .2, uLogo);
       p += vec3(sin(p.y * 3. + uTime * .38 + aData.z), cos(p.x * 3. + uTime * .31 + aData.z), sin(uTime * .27 + aData.z)) * drift;
+      float focus = 0.;
       if (aData.w > .5) {
         p.xy += vec2(sin(uTime * .18 + aData.z), cos(uTime * .13 + aData.z)) * .025;
         gl_Position = vec4(p.x, p.y, 0., 1.);
@@ -172,23 +234,28 @@
         vec2 pixel = uCenter + vec2(p.x, -p.y) * uScale * perspective;
         vec2 delta = pixel - uPointer;
         // Rotate locally about the cursor: the radius is preserved, so no empty hole opens.
-        float influence = 1. - smoothstep(0., 90., length(delta));
-        float cursorAngle = influence * .065 * uPointerStrength;
+        float influence = 1. - smoothstep(0., 135., length(delta));
+        float cursorAngle = influence * .028 * uPointerStrength;
         float cursorC = cos(cursorAngle), cursorS = sin(cursorAngle);
         pixel = uPointer + mat2(cursorC, cursorS, -cursorS, cursorC) * delta;
         vec2 clip = pixel / uViewport * 2. - 1.;
         gl_Position = vec4(clip.x, -clip.y, 0., 1.);
+        focus = influence * uPointerStrength;
+        float magnify = focus * (1.4 + .8 * aData.x);
         float depthSize = clamp(.7 + p.z * .20, .32, 1.35);
-        gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField) * mix(1., .64, uLogo);
+        gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField) * mix(1., .64, max(uLogo, uGrowth)) * (1. + magnify);
         float presence = 1. - smoothstep(uDensity - .06, uDensity + .06, aData.x);
         vAlpha = clamp(.6 + p.z * .42, .10, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
         vAlpha = mix(vAlpha, uOpacity * presence * .96, uLogo);
+        vAlpha = min(1., vAlpha * (1. + focus * .8));
+        vAlpha *= smoothstep(uHeader * .35, uHeader + 20., pixel.y);
         if (presence < .001) { gl_Position = vec4(3., 3., 0., 1.); gl_PointSize = 1.; }
       }
       float angle = aData.z + uTime * (.085 + aData.x * .085);
       vSpin = vec2(cos(angle), sin(angle));
       vTilt = vec2(.77 + .23 * sin(uTime * .19 + aData.z), .82 + .18 * cos(uTime * .17 + aData.z));
       vColor = mix(aColorFrom, aColorTo, localMix);
+      vColor = mix(vColor, min(vec3(1.), vColor * 1.5 + .10), focus * .7);
     }
   `;
   const fragment = `
@@ -218,7 +285,7 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
     const uniforms = {};
-    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field', 'Logo']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
+    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field', 'Logo', 'Growth', 'BuildLogo', 'BuildGrowth', 'Header']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
     const locations = {}, buffers = {};
     for (const name of ['From', 'To', 'ColorFrom', 'ColorTo', 'Data']) {
       locations[name] = gl.getAttribLocation(program, 'a' + name); gl.enableVertexAttribArray(locations[name]);
@@ -244,14 +311,14 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, pointData); gl.vertexAttribPointer(locations.Data, 4, gl.FLOAT, false, 0, 0);
       gl.viewport(0, 0, canvas.width, canvas.height); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Pointer, pointerX, pointerY);
-      gl.uniform1f(uniforms.Time, params.time); gl.uniform1f(uniforms.Dpr, dpr);
+      gl.uniform1f(uniforms.Time, params.time); gl.uniform1f(uniforms.Dpr, dpr); gl.uniform1f(uniforms.Header, headerHeight);
       // A separate, unchanging field remains visible behind every scene and the footer.
       bindShape('scatter', 'scatter');
       gl.uniform2f(uniforms.Center, width * .5 + cameraX * 8, height * .5 - cameraY * 6);
       gl.uniform4f(uniforms.Rotation, Math.cos(.1), Math.sin(.1), 1, 0); gl.uniform2f(uniforms.Tilt, 1, 0);
       gl.uniform1f(uniforms.Mix, 0); gl.uniform1f(uniforms.Scale, Math.min(width * .275, height * .445) * 1.2);
       gl.uniform1f(uniforms.Opacity, .46); gl.uniform1f(uniforms.Density, .9);
-      gl.uniform1f(uniforms.Flow, 0); gl.uniform1f(uniforms.Transition, 0); gl.uniform1f(uniforms.Field, 1); gl.uniform1f(uniforms.Logo, 0);
+      gl.uniform1f(uniforms.Flow, 0); gl.uniform1f(uniforms.Transition, 0); gl.uniform1f(uniforms.Field, 1); gl.uniform1f(uniforms.Logo, 0); gl.uniform1f(uniforms.Growth, 0); gl.uniform1f(uniforms.BuildLogo, 0); gl.uniform1f(uniforms.BuildGrowth, 0);
       gl.uniform1f(uniforms.PointerStrength, pointerStrength * .45);
       gl.drawArrays(gl.POINTS, 0, Math.floor(Math.min(count, compact ? 1000 : 3200) * quality));
       if (params.actorOpacity > .002) {
@@ -262,7 +329,8 @@
         gl.uniform1f(uniforms.Mix, t); gl.uniform1f(uniforms.Scale, params.scale);
         gl.uniform1f(uniforms.Opacity, params.opacity * params.actorOpacity); gl.uniform1f(uniforms.Density, params.density);
         gl.uniform1f(uniforms.Flow, params.flow); gl.uniform1f(uniforms.Transition, params.transition);
-        gl.uniform1f(uniforms.PointerStrength, pointerStrength * (1 - params.logo)); gl.uniform1f(uniforms.Logo, params.logo);
+        gl.uniform1f(uniforms.PointerStrength, pointerStrength * (1 - Math.max(params.logo, params.growth))); gl.uniform1f(uniforms.Logo, params.logo);
+        gl.uniform1f(uniforms.Growth, params.growth); gl.uniform1f(uniforms.BuildLogo, params.buildLogo); gl.uniform1f(uniforms.BuildGrowth, params.buildGrowth);
         gl.uniform1f(uniforms.Field, mix(a.shape === 'scatter' || a.shape === 'ambient' ? 1 : 0, b.shape === 'scatter' || b.shape === 'ambient' ? 1 : 0, t));
         gl.drawArrays(gl.POINTS, 0, params.drawCount);
       }
@@ -288,7 +356,7 @@
       attribute vec3 aCorner, aOrigin, aInk;
       attribute vec4 aStyle;
       uniform vec2 uViewport, uCamera;
-      uniform float uTime, uScroll;
+      uniform float uTime, uScroll, uHeader;
       varying vec3 vInk;
       varying float vAlpha;
       void main() {
@@ -309,7 +377,7 @@
         vec2 pixel = origin * uViewport * .5 + vec2(p.x, p.y) * aStyle.x * depth * perspective;
         gl_Position = vec4(pixel / uViewport * 2., 0., 1.);
         vInk = aInk;
-        vAlpha = aStyle.w * (.45 + aOrigin.z * .75);
+        vAlpha = aStyle.w * (.45 + aOrigin.z * .75) * smoothstep(uHeader * .35, uHeader + 20., uViewport.y * .5 - pixel.y);
       }
     `;
     for (const [type, text] of [[gl.VERTEX_SHADER, source], [gl.FRAGMENT_SHADER, 'precision mediump float; varying vec3 vInk; varying float vAlpha; void main(){gl_FragColor=vec4(vInk,vAlpha);}']]) {
@@ -326,12 +394,12 @@
       gl.enableVertexAttribArray(location); bindings.push({ buffer, location, size });
     }
     const viewport = gl.getUniformLocation(program, 'uViewport'), camera = gl.getUniformLocation(program, 'uCamera');
-    const time = gl.getUniformLocation(program, 'uTime'), scroll = gl.getUniformLocation(program, 'uScroll');
+    const time = gl.getUniformLocation(program, 'uTime'), scroll = gl.getUniformLocation(program, 'uScroll'), header = gl.getUniformLocation(program, 'uHeader');
     return () => {
       gl.useProgram(program);
       for (const binding of bindings) { gl.bindBuffer(gl.ARRAY_BUFFER, binding.buffer); gl.vertexAttribPointer(binding.location, binding.size, gl.FLOAT, false, 0, 0); }
       gl.uniform2f(viewport, width, height); gl.uniform2f(camera, cameraX, cameraY);
-      gl.uniform1f(time, params.time); gl.uniform1f(scroll, params.scroll);
+      gl.uniform1f(time, params.time); gl.uniform1f(scroll, params.scroll); gl.uniform1f(header, headerHeight);
       gl.drawArrays(gl.LINES, 0, ambientCount * 12);
     };
   }
@@ -404,13 +472,18 @@
         if (i < count && i >= params.drawCount) { i = count - 1; continue; }
         const index = i * 3, ambient = i >= count, p = points[i];
         if (ambient) continue;
-        const stagger = p.w * .22 * params.transition;
-        const q = smooth(clamp((t - stagger) / (1 - .22 * params.transition)));
+        const staggerRange = mix(.22, .42, Math.max(params.buildLogo, params.buildGrowth)) * params.transition;
+        let arrival = mix(p.w, p.w * .65 + clamp(.5 - to[index + 1] * .5) * .35, params.buildLogo);
+        arrival = mix(arrival, p.w * .55 + clamp(.5 + to[index] * .5) * .45, params.buildGrowth);
+        const stagger = arrival * staggerRange;
+        const q = smooth(clamp((t - stagger) / (1 - staggerRange)));
         const path = Math.sin(q * Math.PI) * params.transition;
+        const pathSize = mix(.33, .55, params.buildLogo);
         const winding = data[i * 4 + 2] + q * 2.4;
-        let x = mix(from[index], to[index], q) + Math.sin(winding) * path * .33;
-        let y = mix(from[index + 1], to[index + 1], q) + Math.cos(winding * 1.3) * path * .33;
-        const depth = mix(from[index + 2], to[index + 2], q) + Math.sin(winding * .8 + p.w * 5) * path * .33;
+        let x = mix(from[index], to[index], q) + Math.sin(winding) * path * pathSize;
+        const targetY = mix(to[index + 1], mix(-.466667, to[index + 1], smooth(clamp((q - .2) / .65))), params.buildGrowth);
+        let y = mix(from[index + 1], targetY, q) + Math.cos(winding * 1.3) * path * pathSize;
+        const depth = mix(from[index + 2], to[index + 2], q) + Math.sin(winding * .8 + p.w * 5) * path * pathSize;
         const tiltC = Math.cos(params.rotationX), tiltS = Math.sin(params.rotationX);
         const z0 = depth * tiltC - y * tiltS; y = y * tiltC + depth * tiltS;
         const z = z0 * ca - x * sa;
@@ -419,22 +492,23 @@
         const perspective = 4.5 / (4.5 - z);
         let px = ambient ? p.u * width : cx + rotatedX * scale * perspective;
         let py = ambient ? p.v * height : cy - y * scale * perspective;
+        let focus = 0;
         if (!ambient && !reduced.matches && pointerStrength > .01) {
           const dx = px - pointerX, dy = py - pointerY, distance = Math.hypot(dx, dy);
-          if (distance < 90) {
-            const influence = 1 - smooth(clamp(distance / 90));
-            const angle = influence * .065 * pointerStrength, c = Math.cos(angle), s = Math.sin(angle);
+          if (distance < 135) {
+            const influence = 1 - smooth(clamp(distance / 135)); focus = influence * pointerStrength * (1 - Math.max(params.logo, params.growth));
+            const angle = influence * .028 * pointerStrength, c = Math.cos(angle), s = Math.sin(angle);
             px = pointerX + dx * c - dy * s; py = pointerY + dx * s + dy * c;
           }
         }
-        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective) * mix(1, .64, params.logo);
+        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective) * mix(1, .64, Math.max(params.logo, params.growth)) * (1 + focus * (1.4 + .8 * p.w));
         const presence = 1 - smooth(clamp((p.w - params.density + .06) / .12));
         if (!ambient && presence < .001) continue;
         const cr0 = Math.round(mix(fromColor[index], toColor[index], q) * 255);
         const cg0 = Math.round(mix(fromColor[index + 1], toColor[index + 1], q) * 255);
         const cb0 = Math.round(mix(fromColor[index + 2], toColor[index + 2], q) * 255);
         ctx.strokeStyle = params.transition ? `rgb(${cr0},${cg0},${cb0})` : css[i];
-        ctx.globalAlpha = ambient ? .17 : clamp(.6 + z * .42, .15, 1) * opacity * presence * params.actorOpacity;
+        ctx.globalAlpha = ambient ? .17 : clamp(clamp(.6 + z * .42, .15, 1) * opacity * presence * params.actorOpacity * (1 + focus * .8));
         ctx.beginPath();
         for (let k = 0; k < 3; k++) {
           const sx = spinX[index + k], sy = spinY[index + k];
@@ -466,7 +540,7 @@
   function measureStops() {
     stops = sections.map(section => {
       const panel = section.querySelector('.story-panel');
-      return { name: section.dataset.scene, at: section.getBoundingClientRect().top + scrollY, panelBottom: panel ? panel.getBoundingClientRect().bottom + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0 };
+      return { name: section.dataset.scene, at: section.getBoundingClientRect().top + scrollY, panelTop: panel ? panel.getBoundingClientRect().top + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0, panelBottom: panel ? panel.getBoundingClientRect().bottom + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0 };
     });
   }
   function setResolution() {
@@ -476,7 +550,7 @@
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
   }
   function resize() {
-    width = innerWidth; height = innerHeight; setResolution(); measureStops(); draw(performance.now(), 16.67);
+    width = innerWidth; height = innerHeight; headerHeight = document.querySelector('.site-header')?.offsetHeight || (width <= 760 ? 72 : 88); setResolution(); measureStops(); draw(performance.now(), 16.67);
   }
   function queueLayout() {
     if (layoutFrame) return;
@@ -487,7 +561,19 @@
     const elapsed = Math.min(delta, 50);
     visualScroll = reduced.matches ? scrollY : mix(visualScroll, scrollY, 1 - Math.exp(-elapsed / 105));
     if (Math.abs(visualScroll - scrollY) < .1) visualScroll = scrollY;
-    const scroll = visualScroll, i = sceneAt(scroll), a = params.a, b = params.b, t = params.t, pose = params.pose;
+    const scroll = visualScroll, i = sceneAt(scroll);
+    const finalStop = stops[stops.length - 1];
+    const logoOnstage = finalStop.panelTop - scroll < height * .72 && finalStop.panelBottom - scroll > headerHeight;
+    logoTime = reduced.matches ? (logoOnstage ? 2200 : 0) : clamp(logoTime + (logoOnstage ? elapsed : -elapsed * 2), 0, 2200);
+    const assemblyState = logoTime >= 2200 ? 'formed' : logoTime > 0 ? 'forming' : 'idle';
+    if (assemblyState !== logoState) { logoState = assemblyState; canvas.dataset.logo = assemblyState; }
+    params.buildLogo = 0;
+    if (params.a.shape === 'logo' || params.b.shape === 'logo') {
+      params.a = scenes.ambient; params.b = scenes.ribbon;
+      params.t = logoTime / 2200; params.pose = 1;
+      params.transition = 1; params.flow = Math.sin(params.t * Math.PI); params.buildLogo = 1;
+    }
+    const a = params.a, b = params.b, t = params.t, pose = params.pose;
     const mobile = width <= 760;
     params.time = reduced.matches ? 0 : timelineTime; params.scroll = scroll;
     params.cx = mobile ? width * .5 : width * mix(a.x, b.x, pose);
@@ -507,11 +593,15 @@
     cameraX += (targetCameraX - cameraX) * follow; cameraY += (targetCameraY - cameraY) * follow;
     pointerX += (targetX - pointerX) * follow; pointerY += (targetY - pointerY) * follow;
     pointerStrength += ((pointerOn && !reduced.matches ? 1 : 0) - pointerStrength) * follow;
-    params.cx += cameraX * (mobile ? 0 : 13); params.cy -= cameraY * (mobile ? 0 : 9);
+    params.cx += cameraX * (mobile ? 0 : 6); params.cy -= cameraY * (mobile ? 0 : 4);
     params.logo = mix(a.shape === 'logo' ? 1 : 0, b.shape === 'logo' ? 1 : 0, t);
-    params.rotationX = cameraY * .10 * (1 - params.logo * .85);
-    params.rotationY = mix(a.ry, b.ry, pose) + cameraX * .19 * (1 - params.logo * .85) + (reduced.matches ? 0 : Math.sin(params.time * .17) * .075 * (1 - params.logo));
-    params.rotationZ = mix(a.rz, b.rz, pose); params.opacity = mix(a.opacity, b.opacity, t);
+    params.buildGrowth = b.shape === 'growth' ? 1 : 0;
+    params.growth = mix(a.shape === 'growth' ? 1 : 0, b.shape === 'growth' ? 1 : 0, t);
+    params.rotationX = cameraY * .035 * (1 - params.logo * .85);
+    params.rotationY = mix(a.ry, b.ry, pose) + cameraX * .06 * (1 - params.logo * .85) + (reduced.matches ? 0 : Math.sin(params.time * .17) * .075 * (1 - params.logo));
+    params.rotationZ = mix(a.rz, b.rz, pose);
+    fitActor(a, b, pose, mobile);
+    params.opacity = mix(a.opacity, b.opacity, t);
     params.drawCount = Math.max(1, Math.floor(count * quality));
     params.density = mix(a.density, b.density, t);
     const aField = a.shape === 'scatter' || a.shape === 'ambient', bField = b.shape === 'scatter' || b.shape === 'ambient';

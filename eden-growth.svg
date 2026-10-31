@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420" viewBox="0 0 600 420" role="img" aria-labelledby="title desc">
+  <title id="title">Crescimento e direção financeira</title>
+  <desc id="desc">Cinco barras azuis em crescimento e uma seta dourada ascendente. Ilustração sem valores numéricos.</desc>
+  <defs>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3d789a"/><stop offset="1" stop-color="#0b2339" stop-opacity=".5"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#132f47"/><stop offset="1" stop-color="#285675"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#a77e32" stop-opacity=".3"/><stop offset=".5" stop-color="#dfb956"/><stop offset="1" stop-color="#fff0b6"/></linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  <g stroke="#67a3bd" stroke-opacity=".22" stroke-width="1">
+    <path d="M90 350V310h62v40Z" fill="url(#bar)"/><path d="m90 310 10-8h62l-10 8Z" fill="#487f9a"/><path d="m152 310 10-8v40l-10 8Z" fill="url(#edge)"/>
+    <path d="M182 350v-78h62v78Z" fill="url(#bar)"/><path d="m182 272 10-8h62l-10 8Z" fill="#487f9a"/><path d="m244 272 10-8v78l-10 8Z" fill="url(#edge)"/>
+    <path d="M274 350V226h62v124Z" fill="url(#bar)"/><path d="m274 226 10-8h62l-10 8Z" fill="#487f9a"/><path d="m336 226 10-8v124l-10 8Z" fill="url(#edge)"/>
+    <path d="M366 350V174h62v176Z" fill="url(#bar)"/><path d="m366 174 10-8h62l-10 8Z" fill="#487f9a"/><path d="m428 174 10-8v176l-10 8Z" fill="url(#edge)"/>
+    <path d="M458 350V112h62v238Z" fill="url(#bar)"/><path d="m458 112 10-8h62l-10 8Z" fill="#487f9a"/><path d="m520 112 10-8v238l-10 8Z" fill="url(#edge)"/>
+  </g>
+  <path d="M38 333C220 313 417 249 551 59" fill="none" stroke="#ffe8a3" stroke-opacity=".55" stroke-width="10" filter="url(#glow)"/>
+  <path d="M38 333C220 313 417 249 551 59" fill="none" stroke="url(#gold)" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="m556 50-8 30-9-12-14-4Z" fill="#fff0b6"/>
+</svg>
