@@ -20,12 +20,67 @@
   addEventListener('scroll', updateHeader, { passive: true });
   updateHeader();
   $('#currentYear').textContent = new Date().getFullYear();
-  if ('IntersectionObserver' in window && !reduced.matches) {
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-      if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
-    }), { threshold: .15 });
-    $$('.story-panel').forEach(panel => observer.observe(panel));
+  // Reversible text choreography follows the same native scroll as the artwork.
+  // The reading zone stays fully opaque; only the viewport edges ease in/out.
+  // Cache geometry on layout changes, never read it inside a scroll frame.
+  const motionPanels = $$('#inicio .hero-copy, #cenario .story-statement, #metodo .story-panel, #conversar .final-copy');
+  let panelBounds = [], panelFrame = 0, panelLayoutFrame = 0;
+  const limit = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
+  const ease = value => value * value * (3 - 2 * value);
+  function resetPanels() {
+    motionPanels.forEach(panel => {
+      panel.classList.remove('story-drift');
+      panel.style.removeProperty('--story-y');
+      panel.style.removeProperty('--story-opacity');
+    });
   }
+  function updatePanels() {
+    panelFrame = 0;
+    if (reduced.matches || document.hidden) return;
+    const scroll = scrollY, viewport = innerHeight;
+    const focus = document.activeElement;
+    for (const item of panelBounds) {
+      const top = item.top - scroll, bottom = top + item.height;
+      const entering = ease(limit((viewport - top) / (viewport * .3)));
+      const leaving = ease(limit(bottom / (viewport * .18)));
+      const focused = item.section === focus || item.panel.contains(focus);
+      const opacity = focused ? 1 : .2 + .8 * Math.min(entering, leaving);
+      const parallax = limit((top + item.height * .5 - viewport * .5) * .025, -10, 10);
+      const y = focused ? 0 : (1 - entering) * 26 - (1 - leaving) * 14 + parallax;
+      const nextY = y.toFixed(1), nextOpacity = opacity.toFixed(3);
+      if (nextY !== item.y) { item.panel.style.setProperty('--story-y', nextY + 'px'); item.y = nextY; }
+      if (nextOpacity !== item.opacity) { item.panel.style.setProperty('--story-opacity', nextOpacity); item.opacity = nextOpacity; }
+    }
+  }
+  function queuePanels() {
+    if (!panelFrame && !reduced.matches && !document.hidden) panelFrame = requestAnimationFrame(updatePanels);
+  }
+  function measurePanels() {
+    panelLayoutFrame = 0;
+    cancelAnimationFrame(panelFrame); panelFrame = 0;
+    resetPanels();
+    if (reduced.matches) { panelBounds = []; return; }
+    panelBounds = motionPanels.map(panel => {
+      const bounds = panel.getBoundingClientRect();
+      return { panel, section: panel.closest('section'), top: bounds.top + scrollY, height: bounds.height, y: null, opacity: null };
+    });
+    motionPanels.forEach(panel => panel.classList.add('story-drift'));
+    updatePanels();
+  }
+  function queuePanelLayout() {
+    if (!panelLayoutFrame) panelLayoutFrame = requestAnimationFrame(measurePanels);
+  }
+  addEventListener('scroll', queuePanels, { passive: true });
+  addEventListener('resize', queuePanelLayout, { passive: true });
+  document.addEventListener('focusin', queuePanels);
+  document.addEventListener('focusout', queuePanels);
+  document.addEventListener('visibilitychange', queuePanels);
+  reduced.addEventListener('change', queuePanelLayout);
+  if ('ResizeObserver' in window) {
+    const panelLayout = new ResizeObserver(queuePanelLayout);
+    document.querySelectorAll('.story-section').forEach(section => panelLayout.observe(section));
+  }
+  measurePanels();
 
   // Manual carousel: no autoplay, all eight services stay accessible without JavaScript.
   const carousel = $('.service-carousel');
