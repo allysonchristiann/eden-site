@@ -23,7 +23,7 @@
   const limit = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
   const ease = value => value * value * (3 - 2 * value);
   let chapterBounds = [], panelFrame = 0, panelLayoutFrame = 0, viewport = innerHeight;
-  let lastScroll = NaN;
+  let lastScroll = NaN, layoutWidth = innerWidth, resizeTimer = 0;
   function stateFor(index, scroll) {
     const item = chapterBounds[index], next = chapterBounds[index + 1];
     const entering = index === 0 ? 1 : ease(limit((scroll - item.boundary) / (viewport * .20)));
@@ -105,7 +105,16 @@
     if (!panelLayoutFrame) panelLayoutFrame = requestAnimationFrame(measurePanels);
   }
   addEventListener('scroll', queuePanels, { passive: true });
-  addEventListener('resize', queuePanelLayout, { passive: true });
+  addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    if (innerWidth !== layoutWidth) {
+      layoutWidth = innerWidth; queuePanelLayout();
+    } else {
+      // Mobile browser chrome changes height repeatedly during a gesture.
+      // Keep the common reading geometry stable until that change settles.
+      resizeTimer = setTimeout(queuePanelLayout, 180);
+    }
+  }, { passive: true });
   document.addEventListener('visibilitychange', queuePanels);
   reduced.addEventListener('change', queuePanelLayout);
   if ('ResizeObserver' in window) {
@@ -117,6 +126,7 @@
   // Manual carousel: no autoplay, all eight services stay accessible without JavaScript.
   const carousel = $('.service-carousel');
   const cards = $$('.service-card', carousel);
+  $('#serviceDeck').classList.add('is-enhanced');
   let currentService = 0;
   function showService(index) {
     currentService = (index + cards.length) % cards.length;

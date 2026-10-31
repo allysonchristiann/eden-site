@@ -4,6 +4,9 @@
   let canvas = document.getElementById('edenParticles');
   const sections = [...document.querySelectorAll('.story-section[data-scene]')];
   if (!canvas || !sections.length) return;
+  // Touch layouts use cached canvases inside their text composition. Native
+  // scrolling moves those textures without running a fullscreen GPU loop.
+  if (window.edenMobileMotion?.enabled) return;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const compact = matchMedia('(max-width: 760px)').matches;
   const count = compact ? 2200 : 6400;

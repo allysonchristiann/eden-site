@@ -248,3 +248,14 @@ html[data-art-ready="true"] .story-art .art-fallback { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .story-composition.is-choreographed { opacity: 1; transform: none; }
 }
+
+/* All cards share the tallest card's grid cell. Complete lists stay readable
+   and changing services never shifts the rest of the story. */
+.service-deck.is-enhanced { display: grid; }
+.service-deck.is-enhanced > .service-card { grid-area: 1 / 1; min-width: 0; }
+.service-deck.is-enhanced > .service-card[hidden] { display: block !important; visibility: hidden; pointer-events: none; }
+.service-card li { font-size: 13px; }
+/* Cached mobile artwork inherits exactly the copy's opacity and scroll position. */
+.mobile-particle-art { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+html.mobile-motion [data-art-slot] .art-fallback { visibility: visible; }
+html.mobile-motion [data-mobile-art-ready] .art-fallback { visibility: hidden; }
