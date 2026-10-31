@@ -1,4 +1,4 @@
-/* EDEN — continuous procedural particle scenes. No model, CDN or runtime library. */
+/* EDEN — lightweight, continuous particle scenes; no external runtime. */
 (() => {
   'use strict';
   let canvas = document.getElementById('edenParticles');
@@ -6,167 +6,126 @@
   if (!canvas || !sections.length) return;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const compact = matchMedia('(max-width: 760px)').matches;
-  const count = compact ? 3600 : 14500;
-  const ambientCount = compact ? 38 : 85;
+  const count = compact ? 2200 : 6400;
+  const ambientCount = compact ? 24 : 48;
   const total = count + ambientCount;
-  let state = 7321;
-  const random = () => { state = state * 16807 % 2147483647; return (state - 1) / 2147483646; };
   const tau = Math.PI * 2;
   const clamp = (n, a = 0, b = 1) => Math.min(b, Math.max(a, n));
   const mix = (a, b, t) => a + (b - a) * t;
   const smooth = t => t * t * (3 - 2 * t);
+  let seed = 7321;
+  const random = () => { seed = seed * 16807 % 2147483647; return (seed - 1) / 2147483646; };
   const color = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
   const gold = color('#edbe34'), white = color('#e8e3ef'), purple = color('#8951e9'), teal = color('#238d84'), navy = color('#456cae');
   const palette = [gold, white, purple, teal, navy];
   const points = Array.from({ length: total }, () => ({ u: random(), v: random(), w: random(), s: random() }));
-  const positions = {}, colors = {};
-  const data = new Float32Array(total * 4);
-  const landmasses = [
-    [[-168,66],[-135,73],[-105,72],[-58,52],[-81,25],[-98,18],[-117,31],[-125,49]],
-    [[-81,12],[-61,9],[-35,-7],[-45,-25],[-70,-56],[-78,-31]],
-    [[-19,35],[10,38],[35,31],[51,10],[40,-13],[20,-35],[9,-29],[-6,2]],
-    [[-10,36],[-9,58],[22,72],[57,67],[86,77],[142,61],[172,52],[134,29],[115,1],[98,8],[77,9],[54,29],[29,41]],
-    [[113,-12],[137,-10],[154,-23],[149,-39],[116,-35]],
-    [[-53,60],[-24,70],[-35,83],[-60,79]],
-    [[45,-13],[50,-12],[48,-25],[43,-26]]
-  ];
-  function inside(x, y, polygon) {
-    let hit = false;
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const [xi, yi] = polygon[i], [xj, yj] = polygon[j];
-      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) hit = !hit;
-    }
-    return hit;
-  }
-  function surface(name, i, p) {
-    const u = p.u * tau, z = 2 * p.v - 1, r = Math.sqrt(1 - z * z);
-    const sx = Math.cos(u) * r, sz = Math.sin(u) * r;
-    if (name === 'brain') {
-      if (i % 29 === 0) { // A subtle brainstem below the folded cortex.
-        return [(p.u - .5) * .19 + .32, -.73 - p.v * .56, (p.w - .5) * .19];
-      }
-      const folds = .055 * Math.sin(u * 11 + z * 12) + .035 * Math.cos(u * 17 - z * 19);
-      const groove = Math.pow(Math.abs(Math.sin(u * 5 + z * 7 + .5 * Math.sin(z * 8))), 12) * .075;
-      const radius = 1 + folds - groove;
-      const fissure = 1 - .1 * Math.exp(-sz * sz * 100);
-      return [sx * 1.24 * radius, (z * .9 + .09 * Math.cos(u * 2)) * radius * fissure, sz * .73 * radius];
-    }
+  const positions = {}, colors = {}, data = new Float32Array(total * 4);
+  function surface(name, p) {
+    const u = p.u * tau;
     if (name === 'bulb') {
       if (p.v < .72) {
-        const yy = 1.1 - p.v / .72 * 1.7;
-        const rr = yy >= -.15
-          ? .8 * Math.sqrt(Math.max(0, 1 - ((yy - .3) / .8) ** 2))
-          : mix(.6614, .27, smooth(clamp((-.15 - yy) / .45)));
-        return [Math.cos(u) * rr, yy, Math.sin(u) * rr];
+        const y = 1.1 - p.v / .72 * 1.7;
+        const r = y >= -.15 ? .8 * Math.sqrt(Math.max(0, 1 - ((y - .3) / .8) ** 2)) : mix(.6614, .27, smooth(clamp((-.15 - y) / .45)));
+        return [Math.cos(u) * r, y, Math.sin(u) * r];
       }
       const t = (p.v - .72) / .28;
-      const rr = t < .75 ? .27 + .024 * Math.sin(t * 54) : .27 * Math.sqrt((1 - t) / .25);
-      return [Math.cos(u) * rr, -.6 - t * .65, Math.sin(u) * rr];
+      const r = t < .75 ? .27 + .024 * Math.sin(t * 54) : .27 * Math.sqrt((1 - t) / .25);
+      return [Math.cos(u) * r, -.6 - t * .65, Math.sin(u) * r];
     }
-    if (name === 'globe') return [sx, z, sz];
     if (name === 'ribbon') {
-      const t = p.u * tau * 1.75;
-      const band = (p.v - .5) * .9;
-      const rad = .46 + band * Math.cos(t * .65);
-      return [Math.cos(t) * rad, (p.u - .5) * 2.6 + band * Math.sin(t * .65), Math.sin(t) * rad];
+      const t = p.u * tau * 1.75, band = (p.v - .5) * .9;
+      const r = .46 + band * Math.cos(t * .65);
+      return [Math.cos(t) * r, (p.u - .5) * 2.6 + band * Math.sin(t * .65), Math.sin(t) * r];
     }
-    // Dispersed points maintain their identities throughout every transition.
     return [(p.u - .5) * 4.6, (p.v - .5) * 3.1, (p.w - .5) * 2.8];
   }
-  for (const name of ['brain', 'scatter', 'bulb', 'globe', 'ribbon', 'ambient']) {
+  for (const name of ['bulb', 'scatter', 'ribbon', 'ambient']) {
     const xyz = new Float32Array(total * 3), rgb = new Float32Array(total * 3);
     for (let i = 0; i < total; i++) {
       const p = points[i];
-      let pos = surface(name, i, p);
+      let pos = surface(name, p);
       const patch = Math.sin(p.u * 24 + p.v * 13) + Math.cos(p.v * 27 - p.u * 8);
       let c = patch > .8 ? gold : patch < -1 ? purple : patch < -.4 ? teal : white;
-      let brightness = .8;
-      if (name === 'bulb') {
-        c = pos[1] > .58 ? gold : pos[1] < -.75 ? teal : pos[1] < -.33 ? purple : white;
-      } else if (name === 'globe') {
-        const lon = p.u * 360 - 180, lat = Math.asin(p.v * 2 - 1) * 180 / Math.PI;
-        const land = landmasses.some(poly => inside(lon, lat, poly));
-        c = land ? palette[Math.floor(p.w * palette.length)] : navy;
-        brightness = land ? 1 : .13;
-      } else if (name === 'ribbon') {
-        c = palette[Math.min(4, Math.floor(p.u * 5))];
-        brightness = .45;
-      } else if (name === 'ambient') brightness = .28;
-      if (i >= count) {
-        pos = [(p.u - .5) * 2.2, (p.v - .5) * 2.2, p.w];
-        c = palette[i % palette.length]; brightness = 1;
-      }
-      xyz.set(pos, i * 3); rgb.set(c.map(v => v * brightness), i * 3);
+      let brightness = name === 'ambient' ? .2 : .9;
+      if (name === 'bulb') c = pos[1] > .58 ? gold : pos[1] < -.75 ? teal : pos[1] < -.33 ? purple : white;
+      if (name === 'ribbon') { c = palette[Math.min(4, Math.floor(p.u * 5))]; brightness = .45; }
+      if (i >= count) { pos = [(p.u - .5) * 2.2, (p.v - .5) * 2.2, p.w]; c = palette[i % palette.length]; brightness = 1; }
+      xyz.set(pos, i * 3);
+      rgb[i * 3] = c[0] * brightness; rgb[i * 3 + 1] = c[1] * brightness; rgb[i * 3 + 2] = c[2] * brightness;
     }
     positions[name] = xyz; colors[name] = rgb;
   }
   for (let i = 0; i < total; i++) {
     const p = points[i];
-    data.set([p.w, i < count ? (compact ? 6 + p.s * 5 : 10 + p.s * 8) : (compact ? 8 + p.s * 22 : 15 + p.s * 37), p.u * tau, i >= count ? 1 : 0], i * 4);
+    data.set([p.w, i < count ? (compact ? 6 + p.s * 4 : 10 + p.s * 6) : (compact ? 8 + p.s * 16 : 12 + p.s * 26), p.u * tau, i >= count ? 1 : 0], i * 4);
   }
-  let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, pair = '';
-  let renderer, isWebGL = false;
-  let pointer = [-9, -9], targetPointer = [-9, -9];
   const scenes = {
-    'brain-right': { shape: 'brain', x: .72, y: .53, size: .92, ry: -.2, rz: .04, opacity: 1 },
-    'brain-left': { shape: 'brain', x: .27, y: .54, size: 1, ry: .5, rz: -.05, opacity: 1 },
-    scatter: { shape: 'scatter', x: .5, y: .5, size: 1.25, ry: .1, rz: 0, opacity: .58 },
-    bulb: { shape: 'bulb', x: .29, y: .53, size: .89, ry: .2, rz: .3, opacity: 1 },
-    globe: { shape: 'globe', x: .74, y: .56, size: 1.15, ry: -.6, rz: -.1, opacity: 1 },
-    ambient: { shape: 'ambient', x: .5, y: .5, size: 1.4, ry: .3, rz: 0, opacity: .35 },
-    ribbon: { shape: 'ribbon', x: .5, y: .5, size: .92, ry: .4, rz: -.2, opacity: .48 }
+    'bulb-right': { shape: 'bulb', x: .73, y: .5, size: .82, ry: -.15, rz: -.18, opacity: 1, density: 1 },
+    scatter: { shape: 'scatter', x: .5, y: .5, size: 1.2, ry: .1, rz: 0, opacity: .46, density: .65 },
+    bulb: { shape: 'bulb', x: .29, y: .53, size: .86, ry: .2, rz: .25, opacity: 1, density: 1 },
+    ambient: { shape: 'ambient', x: .5, y: .5, size: 1.4, ry: .3, rz: 0, opacity: .25, density: .13 },
+    ribbon: { shape: 'ribbon', x: .5, y: .5, size: .88, ry: .4, rz: -.2, opacity: .48, density: .8 }
   };
+  let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, shapePair = '';
+  let renderer = null, isWebGL = false, contextLost = false, layoutFrame = 0;
+  let quality = 1, slowTime = 0, lastQualityChange = 0, frameInterval = 16.67;
+  let pointerX = -9999, pointerY = -9999, targetX = -9999, targetY = -9999;
+  const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationY: 0, rotationZ: 0, opacity: 1, time: 0, drawCount: count };
+  let artReady = false, activeScene = '';
   function sceneAt(scroll) {
     let i = 0;
     while (i < stops.length - 1 && scroll > stops[i + 1].at) i++;
-    const a = stops[i], b = stops[Math.min(i + 1, stops.length - 1)];
-    const progress = a === b ? 0 : clamp((scroll - a.at) / Math.max(1, b.at - a.at));
-    return { aSection: a.element, bSection: b.element, a: scenes[a.name], b: scenes[b.name], t: smooth(clamp((progress - .12) / .76)), name: progress < .5 ? a.name : b.name };
+    const from = stops[i], to = stops[Math.min(i + 1, stops.length - 1)];
+    const progress = from === to ? 0 : clamp((scroll - from.at) / Math.max(1, to.at - from.at));
+    params.a = scenes[from.name]; params.b = scenes[to.name];
+    params.t = smooth(clamp((progress - .12) / .76));
+    const name = progress < .5 ? from.name : to.name;
+    if (activeScene !== name) { activeScene = name; canvas.dataset.scene = name; }
+    return i;
   }
   const vertex = `
     precision highp float;
     attribute vec3 aFrom, aTo, aColorFrom, aColorTo;
     attribute vec4 aData;
     uniform vec2 uViewport, uCenter, uPointer;
-    uniform float uMix, uTime, uScale, uDpr, uRotateY, uRotateZ, uOpacity;
+    uniform vec4 uRotation;
+    uniform float uMix, uTime, uScale, uDpr, uOpacity;
     varying vec3 vColor;
-    varying float vAlpha, vAngle;
+    varying vec2 vSpin;
+    varying float vAlpha;
     void main() {
       vec3 p = mix(aFrom, aTo, uMix);
-      float t = uTime;
       if (aData.w > .5) {
-        p.xy += vec2(sin(t * .18 + aData.z), cos(t * .13 + aData.z)) * .035;
+        p.xy += vec2(sin(uTime * .18 + aData.z), cos(uTime * .13 + aData.z)) * .025;
         gl_Position = vec4(p.x, p.y, 0., 1.);
         gl_PointSize = aData.y * uDpr;
-        vAlpha = .12 + aData.x * .3;
+        vAlpha = .1 + aData.x * .22;
       } else {
-        float cy = cos(uRotateY), sy = sin(uRotateY);
-        p.xz = mat2(cy, -sy, sy, cy) * p.xz;
-        float cz = cos(uRotateZ), sz = sin(uRotateZ);
-        p.xy = mat2(cz, sz, -sz, cz) * p.xy;
-        p += vec3(sin(t * .45 + aData.z), cos(t * .3 + aData.z), 0.) * .008;
+        p.xz = mat2(uRotation.x, -uRotation.y, uRotation.y, uRotation.x) * p.xz;
+        p.xy = mat2(uRotation.z, uRotation.w, -uRotation.w, uRotation.z) * p.xy;
         float perspective = 4.5 / (4.5 - p.z);
         vec2 pixel = uCenter + vec2(p.x, -p.y) * uScale * perspective;
         vec2 delta = pixel - uPointer;
-        float dist = length(delta);
-        pixel += normalize(delta + .001) * pow(1. - smoothstep(0., 110., dist), 2.) * 25.;
+        float force = 1. - smoothstep(0., 110., length(delta));
+        pixel += normalize(delta + .001) * force * force * 23.;
         vec2 clip = pixel / uViewport * 2. - 1.;
         gl_Position = vec4(clip.x, -clip.y, 0., 1.);
         gl_PointSize = aData.y * uDpr * perspective;
-        vAlpha = clamp(.68 + p.z * .45, .22, 1.) * uOpacity;
+        vAlpha = clamp(.7 + p.z * .45, .22, 1.) * uOpacity;
       }
-      vAngle = aData.z + t * .035;
+      float angle = aData.z + uTime * .035;
+      vSpin = vec2(cos(angle), sin(angle));
       vColor = mix(aColorFrom, aColorTo, uMix);
     }
   `;
   const fragment = `
     precision mediump float;
     varying vec3 vColor;
-    varying float vAlpha, vAngle;
+    varying vec2 vSpin;
+    varying float vAlpha;
     void main() {
       vec2 p = (gl_PointCoord - .5) * 2.8;
-      float c = cos(vAngle), s = sin(vAngle);
-      p = mat2(c, -s, s, c) * p;
+      p = mat2(vSpin.x, -vSpin.y, vSpin.y, vSpin.x) * p;
       float edge = min(p.y + .48, (.94 - p.y - 1.73205 * abs(p.x)) * .5);
       if (edge < -.035) discard;
       float outer = smoothstep(-.035, .025, edge);
@@ -175,90 +134,102 @@
     }
   `;
   function webglRenderer(gl) {
-    function shader(type, source) {
-      const s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
-      return s;
-    }
     const program = gl.createProgram();
-    gl.attachShader(program, shader(gl.VERTEX_SHADER, vertex)); gl.attachShader(program, shader(gl.FRAGMENT_SHADER, fragment));
-    gl.linkProgram(program);
+    function shader(type, source) {
+      const compiled = gl.createShader(type); gl.shaderSource(compiled, source); gl.compileShader(compiled);
+      if (!gl.getShaderParameter(compiled, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(compiled));
+      gl.attachShader(program, compiled);
+    }
+    shader(gl.VERTEX_SHADER, vertex); shader(gl.FRAGMENT_SHADER, fragment); gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
-    const uniforms = Object.fromEntries(['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'RotateY', 'RotateZ', 'Opacity'].map(name => [name, gl.getUniformLocation(program, 'u' + name)]));
-    const buffers = {};
+    const uniforms = {};
+    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Opacity']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
+    const locations = {}, buffers = {};
     for (const name of ['From', 'To', 'ColorFrom', 'ColorTo', 'Data']) {
-      const buffer = gl.createBuffer(), location = gl.getAttribLocation(program, 'a' + name);
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.enableVertexAttribArray(location);
-      gl.vertexAttribPointer(location, name === 'Data' ? 4 : 3, gl.FLOAT, false, 0, 0);
-      if (name === 'Data') gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-      buffers[name] = buffer;
+      locations[name] = gl.getAttribLocation(program, 'a' + name); gl.enableVertexAttribArray(locations[name]);
     }
-    gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.clearColor(0, 0, 0, 0);
-    return params => {
-      const { a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time } = params;
+    // Upload each shape once. Scene changes only bind resident buffers.
+    for (const name of Object.keys(positions)) {
+      buffers[name] = {};
+      for (const [kind, array] of [['position', positions[name]], ['color', colors[name]]]) {
+        const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW); buffers[name][kind] = buffer;
+      }
+    }
+    const pointData = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pointData); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(locations.Data, 4, gl.FLOAT, false, 0, 0);
+    gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0, 0, 0, 0);
+    return () => {
+      const { a, b, t } = params;
       const key = a.shape + ':' + b.shape;
-      if (pair !== key) {
-        for (const [name, array] of [['From', positions[a.shape]], ['To', positions[b.shape]], ['ColorFrom', colors[a.shape]], ['ColorTo', colors[b.shape]]]) {
-          gl.bindBuffer(gl.ARRAY_BUFFER, buffers[name]); gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
+      if (shapePair !== key) {
+        for (const [name, buffer] of [['From', buffers[a.shape].position], ['To', buffers[b.shape].position], ['ColorFrom', buffers[a.shape].color], ['ColorTo', buffers[b.shape].color]]) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.vertexAttribPointer(locations[name], 3, gl.FLOAT, false, 0, 0);
         }
-        pair = key;
+        shapePair = key;
       }
       gl.viewport(0, 0, canvas.width, canvas.height); gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Center, cx, cy);
-      gl.uniform2f(uniforms.Pointer, pointer[0], pointer[1]);
-      for (const [name, value] of [['Mix', t], ['Time', time], ['Scale', scale], ['Dpr', dpr], ['RotateY', rotationY], ['RotateZ', rotationZ], ['Opacity', opacity]]) gl.uniform1f(uniforms[name], value);
-      gl.drawArrays(gl.POINTS, 0, total);
+      gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Center, params.cx, params.cy); gl.uniform2f(uniforms.Pointer, pointerX, pointerY);
+      gl.uniform4f(uniforms.Rotation, Math.cos(params.rotationY), Math.sin(params.rotationY), Math.cos(params.rotationZ), Math.sin(params.rotationZ));
+      gl.uniform1f(uniforms.Mix, t); gl.uniform1f(uniforms.Time, params.time); gl.uniform1f(uniforms.Scale, params.scale);
+      gl.uniform1f(uniforms.Dpr, dpr); gl.uniform1f(uniforms.Opacity, params.opacity);
+      gl.drawArrays(gl.POINTS, 0, params.drawCount); gl.drawArrays(gl.POINTS, count, ambientCount);
     };
   }
   function canvasRenderer(ctx) {
-    const stride = compact ? 3 : 4;
-    return ({ a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time }) => {
+    // Cache CSS colors and trigonometry outside the per-frame particle loop.
+    const cssColors = {}, spinX = new Float32Array(total * 3), spinY = new Float32Array(total * 3);
+    for (const name of Object.keys(colors)) {
+      cssColors[name] = Array.from({ length: total }, (_, i) => `rgb(${Math.round(colors[name][i * 3] * 255)},${Math.round(colors[name][i * 3 + 1] * 255)},${Math.round(colors[name][i * 3 + 2] * 255)})`);
+    }
+    for (let i = 0; i < total; i++) for (let k = 0; k < 3; k++) { spinX[i * 3 + k] = Math.cos(data[i * 4 + 2] + k * tau / 3); spinY[i * 3 + k] = Math.sin(data[i * 4 + 2] + k * tau / 3); }
+    return () => {
+      const { a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time } = params;
+      const from = positions[a.shape], to = positions[b.shape];
+      const css = cssColors[t < .5 ? a.shape : b.shape];
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
       const ca = Math.cos(rotationY), sa = Math.sin(rotationY), cr = Math.cos(rotationZ), sr = Math.sin(rotationZ);
-      for (let i = 0; i < total; i += i >= count ? 1 : stride) {
-        const index = i * 3, p = points[i], ambient = i >= count;
-        let x = mix(positions[a.shape][index], positions[b.shape][index], t);
-        let y = mix(positions[a.shape][index + 1], positions[b.shape][index + 1], t);
-        const z0 = mix(positions[a.shape][index + 2], positions[b.shape][index + 2], t);
-        const z = z0 * ca - x * sa; x = x * ca + z0 * sa;
+      const turnC = Math.cos(time * .035), turnS = Math.sin(time * .035);
+      const stride = Math.max(2, Math.ceil(params.drawCount / 1000));
+      ctx.lineWidth = .8;
+      for (let i = 0; i < total; i = i < count ? Math.min(count, i + stride) : i + 1) {
+        if (i < count && i >= params.drawCount) { i = count - 1; continue; }
+        const index = i * 3, ambient = i >= count, p = points[i];
+        let x = mix(from[index], to[index], t), y = mix(from[index + 1], to[index + 1], t);
+        const z0 = mix(from[index + 2], to[index + 2], t), z = z0 * ca - x * sa;
+        x = x * ca + z0 * sa;
         const rotatedX = x * cr - y * sr; y = x * sr + y * cr;
         const perspective = 4.5 / (4.5 - z);
         let px = ambient ? p.u * width : cx + rotatedX * scale * perspective;
         let py = ambient ? p.v * height : cy - y * scale * perspective;
-        const dx = px - pointer[0], dy = py - pointer[1], distance = Math.hypot(dx, dy);
-        if (!ambient && !reduced.matches && distance > 0 && distance < 110) {
-          const force = (1 - distance / 110) ** 2 * 25;
-          px += dx / distance * force; py += dy / distance * force;
+        if (!ambient && !reduced.matches) {
+          const dx = px - pointerX, dy = py - pointerY, distance = Math.hypot(dx, dy);
+          if (distance > 0 && distance < 110) { const force = (1 - distance / 110) ** 2 * 23; px += dx / distance * force; py += dy / distance * force; }
         }
         const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective);
-        const rgb = [0, 1, 2].map(k => Math.round(clamp(mix(colors[a.shape][index + k], colors[b.shape][index + k], t)) * 255));
-        ctx.strokeStyle = `rgb(${rgb.join(',')})`; ctx.lineWidth = .7;
-        ctx.globalAlpha = ambient ? .25 : clamp(.5 + z * .42, .08, 1) * opacity;
+        ctx.strokeStyle = css[i]; ctx.globalAlpha = ambient ? .2 : clamp(.7 + z * .45, .22, 1) * opacity;
         ctx.beginPath();
-        for (let j = 0; j < 3; j++) {
-          const angle = j * tau / 3 + p.u * tau + time * .035;
-          const tx = px + Math.cos(angle) * size, ty = py + Math.sin(angle) * size;
-          if (!j) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
+        for (let k = 0; k < 3; k++) {
+          const sx = spinX[index + k], sy = spinY[index + k];
+          const tx = px + (sx * turnC - sy * turnS) * size, ty = py + (sx * turnS + sy * turnC) * size;
+          if (!k) ctx.moveTo(tx, ty); else ctx.lineTo(tx, ty);
         }
         ctx.closePath(); ctx.stroke();
       }
       ctx.globalAlpha = 1;
     };
   }
+  function bindContextEvents() {
+    canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); contextLost = true; cancelAnimationFrame(frame); frame = 0; canvas.dataset.renderer = 'context-lost'; });
+    canvas.addEventListener('webglcontextrestored', () => { contextLost = false; renderer = null; shapePair = ''; init(); });
+  }
   function init() {
     let gl = null;
-    try { gl = canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: 'low-power', premultipliedAlpha: true }); } catch (_) { /* Canvas is a supported fallback. */ }
-    if (gl) {
-      try { renderer = webglRenderer(gl); isWebGL = true; } catch (error) { console.warn('EDEN: renderização indisponível', error); }
-    }
+    try { gl = canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: 'high-performance', premultipliedAlpha: true, depth: false, stencil: false }); } catch (_) { /* Supported Canvas fallback below. */ }
+    renderer = null; isWebGL = false;
+    if (gl) try { renderer = webglRenderer(gl); isWebGL = true; } catch (error) { console.warn('EDEN: usando composição alternativa', error); }
     if (!renderer) {
-      // A canvas with a WebGL context cannot acquire a 2D context.
-      if (gl) {
-        const replacement = canvas.cloneNode(false);
-        canvas.replaceWith(replacement); canvas = replacement;
-      }
+      if (gl) { const replacement = canvas.cloneNode(false); canvas.replaceWith(replacement); canvas = replacement; bindContextEvents(); }
       const ctx = canvas.getContext('2d'); if (ctx) renderer = canvasRenderer(ctx);
     }
     if (!renderer) { document.documentElement.classList.add('art-unavailable'); return; }
@@ -266,63 +237,74 @@
     resize(); restart();
   }
   function measureStops() {
-    stops = sections.map(section => ({ name: section.dataset.scene, element: section, at: section.getBoundingClientRect().top + scrollY }));
+    stops = sections.map(section => {
+      const panel = section.querySelector('.story-panel');
+      return { name: section.dataset.scene, at: section.getBoundingClientRect().top + scrollY, panelBottom: panel ? panel.getBoundingClientRect().bottom + scrollY : 0 };
+    });
+  }
+  function setResolution() {
+    // Bound fullscreen fill-rate, especially on Retina and 4K displays.
+    dpr = Math.min(devicePixelRatio || 1, 1.35, Math.sqrt(2000000 / Math.max(1, width * height))) * Math.sqrt(quality);
+    const pixelWidth = Math.max(1, Math.round(width * dpr)), pixelHeight = Math.max(1, Math.round(height * dpr));
+    if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
   }
   function resize() {
-    width = innerWidth; height = innerHeight; dpr = Math.min(devicePixelRatio || 1, compact ? 1.5 : 1.75);
-    canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
-    measureStops();
-    draw(performance.now());
+    width = innerWidth; height = innerHeight; setResolution(); measureStops(); draw(performance.now(), 16.67);
   }
-  function draw(now) {
-    if (!renderer || !stops.length) return;
-    const { a, b, t, name, aSection, bSection } = sceneAt(scrollY);
+  function queueLayout() {
+    if (layoutFrame) return;
+    layoutFrame = requestAnimationFrame(() => { layoutFrame = 0; resize(); });
+  }
+  function draw(now, delta) {
+    if (!renderer || contextLost || !stops.length) return;
+    const scroll = scrollY, i = sceneAt(scroll), a = params.a, b = params.b, t = params.t;
     const mobile = width <= 760;
-    const time = reduced.matches ? 0 : now * .001;
-    const cx = mobile ? width * .5 : width * mix(a.x, b.x, t);
-    let cy = height * mix(a.y, b.y, t);
-    const scale = mobile ? Math.min(width * .39, height * .23) * mix(a.size, b.size, t) : Math.min(width * .275, height * .445) * mix(a.size, b.size, t);
+    params.time = reduced.matches ? 0 : now * .001;
+    params.cx = mobile ? width * .5 : width * mix(a.x, b.x, t);
+    params.cy = height * mix(a.y, b.y, t);
+    params.scale = (mobile ? Math.min(width * .39, height * .23) : Math.min(width * .275, height * .445)) * mix(a.size, b.size, t);
     if (mobile) {
-      const artCenter = (section, scene) => {
-        if (scene.shape === 'scatter' || scene.shape === 'ambient') return height * .52;
-        const panel = section.querySelector('.story-panel');
-        return (panel?.getBoundingClientRect().bottom || height * .5) + 45 + scale * 1.15;
-      };
-      cy = mix(artCenter(aSection, a), artCenter(bSection, b), t);
+      const from = stops[i], to = stops[Math.min(i + 1, stops.length - 1)];
+      const offset = 45 + params.scale * 1.15;
+      const fromY = a.shape === 'scatter' || a.shape === 'ambient' ? height * .52 : from.panelBottom - scroll + offset;
+      const toY = b.shape === 'scatter' || b.shape === 'ambient' ? height * .52 : to.panelBottom - scroll + offset;
+      params.cy = mix(fromY, toY, t);
     }
-    const rotationY = mix(a.ry, b.ry, t) + (reduced.matches ? 0 : Math.sin(time * .13) * .12);
-    const rotationZ = mix(a.rz, b.rz, t);
-    const opacity = mix(a.opacity, b.opacity, t);
-    if (reduced.matches) pointer = [-9999, -9999];
-    else pointer = pointer.map((value, i) => mix(value, targetPointer[i], .12));
-    renderer({ a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time });
-    canvas.dataset.scene = name;
-    document.documentElement.dataset.artReady = 'true';
+    params.rotationY = mix(a.ry, b.ry, t) + (reduced.matches ? 0 : Math.sin(params.time * .13) * .12);
+    params.rotationZ = mix(a.rz, b.rz, t); params.opacity = mix(a.opacity, b.opacity, t);
+    params.drawCount = Math.max(1, Math.floor(count * quality * mix(a.density, b.density, t)));
+    if (reduced.matches) { pointerX = -9999; pointerY = -9999; }
+    else {
+      const follow = 1 - Math.exp(-Math.min(delta, 50) / 85);
+      pointerX += (targetX - pointerX) * follow; pointerY += (targetY - pointerY) * follow;
+    }
+    renderer();
+    if (!artReady) { artReady = true; document.documentElement.dataset.artReady = 'true'; }
   }
   function animate(now) {
+    if (document.hidden || contextLost) { frame = 0; return; }
+    const delta = last ? now - last : 16.67; last = now;
+    // Follow every display frame; the old 24/32ms gate dropped half the frames.
+    draw(now, delta);
+    frameInterval += (Math.min(delta, 100) - frameInterval) * .035;
+    slowTime = frameInterval > 25 ? slowTime + delta : Math.max(0, slowTime - delta);
+    if (slowTime > 1800 && quality > .45 && now - lastQualityChange > 2500) {
+      quality = Math.max(.45, quality * .8); lastQualityChange = now; slowTime = 0;
+      canvas.dataset.quality = quality.toFixed(2); setResolution();
+    }
     frame = requestAnimationFrame(animate);
-    if (document.hidden || now - last < (compact ? 32 : 24)) return;
-    last = now; draw(now);
   }
   function restart() {
-    cancelAnimationFrame(frame); frame = 0;
-    if (document.hidden || !renderer) return;
-    last = 0; draw(performance.now());
+    cancelAnimationFrame(frame); frame = 0; last = 0; frameInterval = 16.67; slowTime = 0;
+    if (document.hidden || !renderer || contextLost) return;
+    draw(performance.now(), 16.67);
     if (!reduced.matches) frame = requestAnimationFrame(animate);
   }
-  addEventListener('pointermove', e => { if (e.pointerType !== 'touch') targetPointer = [e.clientX, e.clientY]; }, { passive: true });
-  document.documentElement.addEventListener('pointerleave', () => { targetPointer = [-9999, -9999]; });
-  addEventListener('scroll', () => { if (reduced.matches) draw(performance.now()); }, { passive: true });
-  addEventListener('resize', resize, { passive: true });
-  document.addEventListener('visibilitychange', restart);
-  reduced.addEventListener('change', restart);
-  canvas.addEventListener('webglcontextlost', event => { event.preventDefault(); cancelAnimationFrame(frame); canvas.dataset.renderer = 'context-lost'; });
-  canvas.addEventListener('webglcontextrestored', () => { pair = ''; init(); });
-  init();
-  // The service carousel changes section heights after the deferred UI script runs.
-  // Keep scroll anchors current after layout, font, orientation or viewport changes.
-  if ('ResizeObserver' in window) {
-    const layout = new ResizeObserver(() => { measureStops(); draw(performance.now()); });
-    sections.forEach(section => layout.observe(section));
-  }
+  addEventListener('pointermove', e => { if (e.pointerType !== 'touch') { targetX = e.clientX; targetY = e.clientY; } }, { passive: true });
+  document.documentElement.addEventListener('pointerleave', () => { targetX = -9999; targetY = -9999; });
+  addEventListener('scroll', () => { if (reduced.matches) draw(performance.now(), 16.67); }, { passive: true });
+  addEventListener('resize', queueLayout, { passive: true });
+  document.addEventListener('visibilitychange', restart); reduced.addEventListener('change', restart);
+  bindContextEvents(); init();
+  if ('ResizeObserver' in window) { const layout = new ResizeObserver(queueLayout); sections.forEach(section => layout.observe(section)); }
 })();
