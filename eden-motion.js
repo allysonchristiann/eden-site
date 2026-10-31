@@ -1,5 +1,5 @@
 /* EDEN — lightweight, continuous particle scenes; no external runtime. */
-(() => {
+(async () => {
   'use strict';
   let canvas = document.getElementById('edenParticles');
   const sections = [...document.querySelectorAll('.story-section[data-scene]')];
@@ -25,8 +25,37 @@
   // Preserve point identities, but never derive the diffuse field from the lamp's UVs.
   // Reusing p.v with the opposite Y direction made the entire cloud collapse to a line.
   for (const point of points) { point.fx = random(); point.fy = random(); point.fz = random(); }
+  const logoPixels = await sampleBrand();
+  if (!logoPixels.length) { document.documentElement.classList.add('art-unavailable'); return; }
   const positions = {}, colors = {}, data = new Float32Array(total * 4);
   const blendColor = (a, b, t) => a.map((value, i) => mix(value, b[i], smooth(clamp(t))));
+  async function sampleBrand() {
+    const mask = document.createElement('canvas'); mask.width = mask.height = 512;
+    const ctx = mask.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return [];
+    try {
+      const image = new Image();
+      await new Promise((resolve, reject) => {
+        image.onload = resolve; image.onerror = reject;
+        image.src = new URL('eden-logo.svg', document.baseURI).href;
+      });
+      ctx.drawImage(image, 0, 0, 512, 512);
+    } catch (_) {
+      // Retain the actual brand features even if the optional SVG request fails.
+      ctx.strokeStyle = '#f4f1e8'; ctx.lineWidth = 7;
+      for (const radius of [94, 73, 52]) { ctx.beginPath(); ctx.arc(256, 218, radius, Math.PI, 0); ctx.stroke(); }
+      ctx.fillStyle = '#d9b56b'; ctx.beginPath(); ctx.arc(256, 218, 30, Math.PI, 0); ctx.fill();
+      ctx.strokeStyle = '#d9b56b'; ctx.beginPath(); ctx.moveTo(108, 246); ctx.lineTo(404, 246); ctx.moveTo(105, 358); ctx.lineTo(407, 358); ctx.stroke();
+      ctx.fillStyle = '#f4f1e8'; ctx.font = '96px Georgia, serif'; ctx.textAlign = 'center'; ctx.fillText('EDEN', 256, 332);
+      ctx.font = '15px Arial, sans-serif'; ctx.fillText('OUTSOURCING FINANCEIRO', 256, 399);
+    }
+    const pixels = ctx.getImageData(0, 0, 512, 512).data, ink = [];
+    for (let y = 0; y < 512; y++) for (let x = 0; x < 512; x++) {
+      const offset = (y * 512 + x) * 4, r = pixels[offset], g = pixels[offset + 1], b = pixels[offset + 2];
+      if (pixels[offset + 3] > 128 && r > 100 && Math.max(r, g, b) > 140) ink.push({ x: x + .5, y: y + .5, r, g, b });
+    }
+    return ink;
+  }
   function surface(name, p) {
     const u = p.u * tau;
     if (name === 'bulb') {
@@ -39,23 +68,9 @@
       const r = t < .75 ? .25 + .02 * Math.sin(t * 54) : .25 * Math.sqrt((1 - t) / .25);
       return [Math.cos(u) * r, -.85 - t * .45, Math.sin(u) * r];
     }
-    if (name === 'sculpture') {
-      // Three curved, open sheets around a vertical spine, not a spiral tube.
-      const radius = Math.sqrt(p.v), angle = p.u * Math.PI * .5;
-      if (p.s < .46) {
-        const x = -.28 + .98 * radius * Math.cos(angle);
-        const y = .08 + 1.22 * radius * Math.sin(angle);
-        const z = .18 + .24 * radius * Math.sin(angle * 2) - .55 * radius * radius;
-        return [x, y, z];
-      }
-      if (p.s < .64) {
-        const x = -.28 - .61 * p.u, y = -.26 + .42 * p.v;
-        return [x, y, .1 + .3 * Math.sin(p.u * Math.PI) + .16 * Math.cos(p.v * Math.PI)];
-      }
-      const x = -.28 + 1.02 * radius * Math.cos(angle);
-      const y = -.29 - .85 * radius * Math.sin(angle);
-      const z = .42 * (1 - radius * radius) + .28 * radius * Math.cos(angle) - .15;
-      return [x, y, z];
+    if (name === 'logo') {
+      const pixel = logoPixels[Math.min(logoPixels.length - 1, Math.floor(p.s * logoPixels.length))];
+      return [(pixel.x / 512 - .5) * 2, (.5 - pixel.y / 512) * 2, (p.w - .5) * .055];
     }
     // An ellipsoidal volume has no visible rectangular boundary and stays full in 3D.
     const latitude = p.fy * 2 - 1, angle = p.fx * tau;
@@ -63,30 +78,23 @@
     const radius = Math.cbrt(.08 + p.fz * .92);
     return [Math.cos(angle) * shell * radius * 2.65, latitude * radius * 1.8, Math.sin(angle) * shell * radius * 2.05];
   }
-  for (const name of ['bulb', 'scatter', 'sculpture', 'ambient']) {
+  for (const name of ['bulb', 'scatter', 'logo', 'ambient']) {
     const xyz = new Float32Array(total * 3), rgb = new Float32Array(total * 3);
     for (let i = 0; i < total; i++) {
       const p = points[i];
       let pos = surface(name, p);
       const patch = Math.sin(p.u * 24 + p.v * 13) + Math.cos(p.v * 27 - p.u * 8);
       let c = patch > .8 ? gold : patch < -1 ? purple : patch < -.4 ? teal : white;
-      let brightness = name === 'ambient' ? .2 : .9;
+      let brightness = .9;
       if (name === 'bulb') {
         const y = pos[1] + Math.sin(p.u * tau * 2) * .045;
         c = y > .35 ? blendColor(white, gold, (y - .35) / .7)
           : y > -.55 ? blendColor(purple, white, (y + .55) / .9)
           : blendColor(teal, purple, (y + 1.25) / .7);
       }
-      if (name === 'sculpture') {
-        if (p.s < .46) {
-          c = pos[1] > .66 ? blendColor(navy, teal, (pos[1] - .66) / .64) : blendColor(purple, navy, (pos[1] - .08) / .58);
-          brightness = .38;
-        } else if (p.s < .64) { c = blendColor(purple, navy, p.u); brightness = .5; }
-        else {
-          c = blendColor(pink, gold, (pos[0] + .28) / 1.02);
-          c = blendColor(c, white, (1 - clamp((-pos[1] - .29) / .25)) * .7);
-          brightness = .9;
-        }
+      if (name === 'logo') {
+        const pixel = logoPixels[Math.min(logoPixels.length - 1, Math.floor(p.s * logoPixels.length))];
+        c = [pixel.r / 255, pixel.g / 255, pixel.b / 255]; brightness = 1;
       }
       if (i >= count) { pos = [(p.u - .5) * 2.2, (p.v - .5) * 2.2, p.w]; c = palette[i % palette.length]; brightness = 1; }
       xyz.set(pos, i * 3);
@@ -102,15 +110,15 @@
     'bulb-right': { shape: 'bulb', x: .74, y: .51, size: .8, ry: -.08, rz: .34, opacity: 1, density: 1 },
     scatter: { shape: 'scatter', x: .5, y: .5, size: 1.2, ry: .1, rz: 0, opacity: .46, density: .65 },
     bulb: { shape: 'bulb', x: .29, y: .50, size: .84, ry: .14, rz: .40, opacity: 1, density: 1 },
-    ambient: { shape: 'ambient', x: .5, y: .5, size: 1.4, ry: .3, rz: 0, opacity: .25, density: .13 },
-    ribbon: { shape: 'sculpture', x: .47, y: .46, size: .68, ry: .12, rz: 0, opacity: .86, density: 1 }
+    ambient: { shape: 'ambient', x: .5, y: .5, size: 1.2, ry: .1, rz: 0, opacity: .46, density: .65 },
+    ribbon: { shape: 'logo', x: .74, y: .53, size: .66, ry: 0, rz: 0, opacity: 1, density: 1 }
   };
   let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, shapePair = '';
   let renderer = null, atmosphere = null, isWebGL = false, contextLost = false, layoutFrame = 0;
   let quality = 1, slowTime = 0, lastQualityChange = 0, frameInterval = 16.67;
   let pointerX = 0, pointerY = 0, targetX = 0, targetY = 0, pointerOn = false, pointerStrength = 0;
   let cameraX = 0, cameraY = 0, visualScroll = scrollY, timelineTime = 0;
-  const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, opacity: 1, density: 1, flow: 0, transition: 0, pose: 0, scroll: 0, time: 0, drawCount: count };
+  const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, opacity: 1, density: 1, flow: 0, transition: 0, pose: 0, scroll: 0, time: 0, logo: 0, actorOpacity: 1, drawCount: count };
   let artReady = false, activeScene = '';
   function sceneAt(scroll) {
     let i = 0;
@@ -136,7 +144,7 @@
     uniform vec2 uViewport, uCenter, uPointer;
     uniform vec4 uRotation;
     uniform vec2 uTilt;
-    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField;
+    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField, uLogo;
     varying vec3 vColor;
     varying vec2 vSpin, vTilt;
     varying float vAlpha;
@@ -149,7 +157,7 @@
       // Curved trajectories unfold across depth before settling into the next form.
       float winding = aData.z + localMix * 2.4;
       p += vec3(sin(winding), cos(winding * 1.3), sin(winding * .8 + aData.x * 5.)) * path * .33;
-      float drift = .009 + uFlow * .055;
+      float drift = (.009 + uFlow * .055) * mix(1., .2, uLogo);
       p += vec3(sin(p.y * 3. + uTime * .38 + aData.z), cos(p.x * 3. + uTime * .31 + aData.z), sin(uTime * .27 + aData.z)) * drift;
       if (aData.w > .5) {
         p.xy += vec2(sin(uTime * .18 + aData.z), cos(uTime * .13 + aData.z)) * .025;
@@ -163,14 +171,18 @@
         float perspective = 4.5 / (4.5 - p.z);
         vec2 pixel = uCenter + vec2(p.x, -p.y) * uScale * perspective;
         vec2 delta = pixel - uPointer;
-        float force = 1. - smoothstep(0., 110., length(delta));
-        pixel += normalize(delta + .001) * force * force * 28. * uPointerStrength;
+        // Rotate locally about the cursor: the radius is preserved, so no empty hole opens.
+        float influence = 1. - smoothstep(0., 90., length(delta));
+        float cursorAngle = influence * .065 * uPointerStrength;
+        float cursorC = cos(cursorAngle), cursorS = sin(cursorAngle);
+        pixel = uPointer + mat2(cursorC, cursorS, -cursorS, cursorC) * delta;
         vec2 clip = pixel / uViewport * 2. - 1.;
         gl_Position = vec4(clip.x, -clip.y, 0., 1.);
         float depthSize = clamp(.7 + p.z * .20, .32, 1.35);
-        gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField);
+        gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField) * mix(1., .64, uLogo);
         float presence = 1. - smoothstep(uDensity - .06, uDensity + .06, aData.x);
         vAlpha = clamp(.6 + p.z * .42, .10, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
+        vAlpha = mix(vAlpha, uOpacity * presence * .96, uLogo);
         if (presence < .001) { gl_Position = vec4(3., 3., 0., 1.); gl_PointSize = 1.; }
       }
       float angle = aData.z + uTime * (.085 + aData.x * .085);
@@ -206,7 +218,7 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
     const uniforms = {};
-    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
+    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field', 'Logo']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
     const locations = {}, buffers = {};
     for (const name of ['From', 'To', 'ColorFrom', 'ColorTo', 'Data']) {
       locations[name] = gl.getAttribLocation(program, 'a' + name); gl.enableVertexAttribArray(locations[name]);
@@ -221,27 +233,39 @@
     const pointData = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pointData); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
     gl.vertexAttribPointer(locations.Data, 4, gl.FLOAT, false, 0, 0);
     gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0, 0, 0, 0);
+    function bindShape(from, to) {
+      for (const [name, buffer] of [['From', buffers[from].position], ['To', buffers[to].position], ['ColorFrom', buffers[from].color], ['ColorTo', buffers[to].color]]) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.vertexAttribPointer(locations[name], 3, gl.FLOAT, false, 0, 0);
+      }
+    }
     return () => {
       const { a, b, t } = params;
-      const key = a.shape + ':' + b.shape;
-      if (shapePair !== key || atmosphere) {
-        for (const [name, buffer] of [['From', buffers[a.shape].position], ['To', buffers[b.shape].position], ['ColorFrom', buffers[a.shape].color], ['ColorTo', buffers[b.shape].color]]) {
-          gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.vertexAttribPointer(locations[name], 3, gl.FLOAT, false, 0, 0);
-        }
-        shapePair = key;
-      }
       gl.useProgram(program);
       gl.bindBuffer(gl.ARRAY_BUFFER, pointData); gl.vertexAttribPointer(locations.Data, 4, gl.FLOAT, false, 0, 0);
       gl.viewport(0, 0, canvas.width, canvas.height); gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Center, params.cx, params.cy); gl.uniform2f(uniforms.Pointer, pointerX, pointerY);
-      gl.uniform4f(uniforms.Rotation, Math.cos(params.rotationY), Math.sin(params.rotationY), Math.cos(params.rotationZ), Math.sin(params.rotationZ));
-      gl.uniform1f(uniforms.Mix, t); gl.uniform1f(uniforms.Time, params.time); gl.uniform1f(uniforms.Scale, params.scale);
-      gl.uniform1f(uniforms.Dpr, dpr); gl.uniform1f(uniforms.Opacity, params.opacity);
-      gl.uniform2f(uniforms.Tilt, Math.cos(params.rotationX), Math.sin(params.rotationX));
-      gl.uniform1f(uniforms.Density, params.density); gl.uniform1f(uniforms.Flow, params.flow);
-      gl.uniform1f(uniforms.Transition, params.transition); gl.uniform1f(uniforms.PointerStrength, pointerStrength);
-      gl.uniform1f(uniforms.Field, mix(a.shape === 'scatter' || a.shape === 'ambient' ? 1 : 0, b.shape === 'scatter' || b.shape === 'ambient' ? 1 : 0, t));
-      gl.drawArrays(gl.POINTS, 0, params.drawCount);
+      gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Pointer, pointerX, pointerY);
+      gl.uniform1f(uniforms.Time, params.time); gl.uniform1f(uniforms.Dpr, dpr);
+      // A separate, unchanging field remains visible behind every scene and the footer.
+      bindShape('scatter', 'scatter');
+      gl.uniform2f(uniforms.Center, width * .5 + cameraX * 8, height * .5 - cameraY * 6);
+      gl.uniform4f(uniforms.Rotation, Math.cos(.1), Math.sin(.1), 1, 0); gl.uniform2f(uniforms.Tilt, 1, 0);
+      gl.uniform1f(uniforms.Mix, 0); gl.uniform1f(uniforms.Scale, Math.min(width * .275, height * .445) * 1.2);
+      gl.uniform1f(uniforms.Opacity, .46); gl.uniform1f(uniforms.Density, .9);
+      gl.uniform1f(uniforms.Flow, 0); gl.uniform1f(uniforms.Transition, 0); gl.uniform1f(uniforms.Field, 1); gl.uniform1f(uniforms.Logo, 0);
+      gl.uniform1f(uniforms.PointerStrength, pointerStrength * .45);
+      gl.drawArrays(gl.POINTS, 0, Math.floor(Math.min(count, compact ? 1000 : 3200) * quality));
+      if (params.actorOpacity > .002) {
+        bindShape(a.shape, b.shape);
+        gl.uniform2f(uniforms.Center, params.cx, params.cy);
+        gl.uniform4f(uniforms.Rotation, Math.cos(params.rotationY), Math.sin(params.rotationY), Math.cos(params.rotationZ), Math.sin(params.rotationZ));
+        gl.uniform2f(uniforms.Tilt, Math.cos(params.rotationX), Math.sin(params.rotationX));
+        gl.uniform1f(uniforms.Mix, t); gl.uniform1f(uniforms.Scale, params.scale);
+        gl.uniform1f(uniforms.Opacity, params.opacity * params.actorOpacity); gl.uniform1f(uniforms.Density, params.density);
+        gl.uniform1f(uniforms.Flow, params.flow); gl.uniform1f(uniforms.Transition, params.transition);
+        gl.uniform1f(uniforms.PointerStrength, pointerStrength * (1 - params.logo)); gl.uniform1f(uniforms.Logo, params.logo);
+        gl.uniform1f(uniforms.Field, mix(a.shape === 'scatter' || a.shape === 'ambient' ? 1 : 0, b.shape === 'scatter' || b.shape === 'ambient' ? 1 : 0, t));
+        gl.drawArrays(gl.POINTS, 0, params.drawCount);
+      }
       if (atmosphere) atmosphere();
     };
   }
@@ -343,17 +367,40 @@
       cssColors[name] = Array.from({ length: total }, (_, i) => `rgb(${Math.round(colors[name][i * 3] * 255)},${Math.round(colors[name][i * 3 + 1] * 255)},${Math.round(colors[name][i * 3 + 2] * 255)})`);
     }
     for (let i = 0; i < total; i++) for (let k = 0; k < 3; k++) { spinX[i * 3 + k] = Math.cos(data[i * 4 + 2] + k * tau / 3); spinY[i * 3 + k] = Math.sin(data[i * 4 + 2] + k * tau / 3); }
+    function backdrop() {
+      const xyz = positions.scatter, css = cssColors.scatter;
+      const stride = Math.ceil(count / (compact ? 350 : 750));
+      const scale = Math.min(width * .275, height * .445) * 1.2;
+      const ca = Math.cos(.1), sa = Math.sin(.1);
+      for (let i = 0; i < count; i += stride) {
+        const p = points[i]; if (p.w > .9) continue;
+        const j = i * 3, x = xyz[j] * ca + xyz[j + 2] * sa, y = xyz[j + 1], z = xyz[j + 2] * ca - xyz[j] * sa;
+        const perspective = 4.5 / (4.5 - z), depthSize = clamp(.7 + z * .2, .32, 1.35);
+        const px = width * .5 + cameraX * 8 + x * scale * perspective;
+        const py = height * .5 - cameraY * 6 - y * scale * perspective;
+        const size = data[i * 4 + 1] * .38 * perspective * depthSize;
+        ctx.strokeStyle = css[i]; ctx.globalAlpha = clamp(.6 + z * .42, .1, 1) * .46 * clamp(.55 + z * .26, .12, 1);
+        ctx.beginPath();
+        const angle = params.time * (.085 + p.w * .085), c = Math.cos(angle), s = Math.sin(angle);
+        for (let k = 0; k < 3; k++) {
+          const vx = spinX[j + k] * c - spinY[j + k] * s, vy = spinX[j + k] * s + spinY[j + k] * c;
+          if (!k) ctx.moveTo(px + vx * size, py + vy * size); else ctx.lineTo(px + vx * size, py + vy * size);
+        }
+        ctx.closePath(); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
     return () => {
       const { a, b, t, cx, cy, scale, rotationY, rotationZ, opacity, time } = params;
       const from = positions[a.shape], to = positions[b.shape];
       const fromColor = colors[a.shape], toColor = colors[b.shape];
       const css = cssColors[t < .5 ? a.shape : b.shape];
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, width, height); backdrop();
       const ca = Math.cos(rotationY), sa = Math.sin(rotationY), cr = Math.cos(rotationZ), sr = Math.sin(rotationZ);
       const turnC = Math.cos(time * .035), turnS = Math.sin(time * .035);
       const stride = Math.max(2, Math.ceil(params.drawCount / 1000));
       ctx.lineWidth = .8;
-      for (let i = 0; i < total; i = i < count ? Math.min(count, i + stride) : i + 1) {
+      if (params.actorOpacity > .002) for (let i = 0; i < total; i = i < count ? Math.min(count, i + stride) : i + 1) {
         if (i < count && i >= params.drawCount) { i = count - 1; continue; }
         const index = i * 3, ambient = i >= count, p = points[i];
         if (ambient) continue;
@@ -374,16 +421,20 @@
         let py = ambient ? p.v * height : cy - y * scale * perspective;
         if (!ambient && !reduced.matches && pointerStrength > .01) {
           const dx = px - pointerX, dy = py - pointerY, distance = Math.hypot(dx, dy);
-          if (distance > 0 && distance < 110) { const force = (1 - distance / 110) ** 2 * 28 * pointerStrength; px += dx / distance * force; py += dy / distance * force; }
+          if (distance < 90) {
+            const influence = 1 - smooth(clamp(distance / 90));
+            const angle = influence * .065 * pointerStrength, c = Math.cos(angle), s = Math.sin(angle);
+            px = pointerX + dx * c - dy * s; py = pointerY + dx * s + dy * c;
+          }
         }
-        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective);
+        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective) * mix(1, .64, params.logo);
         const presence = 1 - smooth(clamp((p.w - params.density + .06) / .12));
         if (!ambient && presence < .001) continue;
         const cr0 = Math.round(mix(fromColor[index], toColor[index], q) * 255);
         const cg0 = Math.round(mix(fromColor[index + 1], toColor[index + 1], q) * 255);
         const cb0 = Math.round(mix(fromColor[index + 2], toColor[index + 2], q) * 255);
         ctx.strokeStyle = params.transition ? `rgb(${cr0},${cg0},${cb0})` : css[i];
-        ctx.globalAlpha = ambient ? .17 : clamp(.6 + z * .42, .15, 1) * opacity * presence;
+        ctx.globalAlpha = ambient ? .17 : clamp(.6 + z * .42, .15, 1) * opacity * presence * params.actorOpacity;
         ctx.beginPath();
         for (let k = 0; k < 3; k++) {
           const sx = spinX[index + k], sy = spinY[index + k];
@@ -457,11 +508,14 @@
     pointerX += (targetX - pointerX) * follow; pointerY += (targetY - pointerY) * follow;
     pointerStrength += ((pointerOn && !reduced.matches ? 1 : 0) - pointerStrength) * follow;
     params.cx += cameraX * (mobile ? 0 : 13); params.cy -= cameraY * (mobile ? 0 : 9);
-    params.rotationX = cameraY * .10;
-    params.rotationY = mix(a.ry, b.ry, pose) + cameraX * .19 + (reduced.matches ? 0 : Math.sin(params.time * .17) * .075);
+    params.logo = mix(a.shape === 'logo' ? 1 : 0, b.shape === 'logo' ? 1 : 0, t);
+    params.rotationX = cameraY * .10 * (1 - params.logo * .85);
+    params.rotationY = mix(a.ry, b.ry, pose) + cameraX * .19 * (1 - params.logo * .85) + (reduced.matches ? 0 : Math.sin(params.time * .17) * .075 * (1 - params.logo));
     params.rotationZ = mix(a.rz, b.rz, pose); params.opacity = mix(a.opacity, b.opacity, t);
     params.drawCount = Math.max(1, Math.floor(count * quality));
     params.density = mix(a.density, b.density, t);
+    const aField = a.shape === 'scatter' || a.shape === 'ambient', bField = b.shape === 'scatter' || b.shape === 'ambient';
+    params.actorOpacity = aField && bField ? 0 : aField ? t : bField ? 1 - t : 1;
     renderer();
     if (!artReady) { artReady = true; document.documentElement.dataset.artReady = 'true'; }
   }

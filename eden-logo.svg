@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">EDEN — Outsourcing Financeiro</title>
+  <desc id="desc">Logo EDEN com arcos brancos e dourados sobre um emblema azul-marinho.</desc>
+  <defs><radialGradient id="navy" cx="50%" cy="42%" r="78%"><stop stop-color="#183658"/><stop offset="1" stop-color="#0d2241"/></radialGradient></defs>
+  <rect x="5" y="5" width="502" height="502" rx="72" fill="url(#navy)" stroke="#f5f4ef" stroke-width="10"/>
+  <g fill="none" stroke-linecap="round" stroke-width="6.5">
+    <path d="M162 218a94 94 0 0 1 188 0" stroke="#f4f1e8"/>
+    <path d="M183 218a73 73 0 0 1 146 0" stroke="#d9b56b"/>
+    <path d="M204 218a52 52 0 0 1 104 0" stroke="#f4f1e8"/>
+  </g>
+  <path d="M226 218a30 30 0 0 1 60 0Z" fill="#d9b56b"/>
+  <path d="M108 246h296M105 358h302" stroke="#d9b56b" stroke-width="5"/>
+  <text x="256" y="332" text-anchor="middle" textLength="316" lengthAdjust="spacingAndGlyphs" font-family="Georgia, 'Times New Roman', serif" font-size="96" letter-spacing="13" fill="#f4f1e8">EDEN</text>
+  <text x="256" y="399" text-anchor="middle" textLength="344" lengthAdjust="spacingAndGlyphs" font-family="Arial, Helvetica, sans-serif" font-size="15" letter-spacing="4" fill="#f4f1e8">OUTSOURCING FINANCEIRO</text>
+</svg>
