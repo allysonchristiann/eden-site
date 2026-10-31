@@ -472,3 +472,14 @@ body:has(#leadForm) .consent input {
   }
   .eden-tech-card.eden-entering { opacity: 1; transform: none; }
 }
+/* EDEN CONSTELLATION V2 */
+@media (min-width: 1021px) {
+  .hero-stage {
+    height: 650px !important;
+  }
+}
+@media (max-width: 600px) {
+  .hero-stage {
+    height: 350px !important;
+  }
+}
