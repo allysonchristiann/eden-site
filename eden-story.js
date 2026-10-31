@@ -17,36 +17,84 @@
   document.addEventListener('click', event => { if (!header.contains(event.target)) setMenu(false); });
   matchMedia('(min-width: 761px)').addEventListener('change', () => setMenu(false));
   $('#currentYear').textContent = new Date().getFullYear();
-  // Reversible text choreography follows the same native scroll as the artwork.
-  // The reading zone stays fully opaque; only the viewport edges ease in/out.
-  // Cache geometry on layout changes, never read it inside a scroll frame.
-  const motionPanels = $$('#inicio .hero-copy, #cenario .story-statement, #metodo .story-panel, #conversar .final-copy');
-  let panelBounds = [], panelFrame = 0, panelLayoutFrame = 0;
+  // Each chapter enters and leaves at an exact scroll position. The small
+  // empty interval between chapters keeps two unrelated messages offscreen
+  // together, and reversing scroll reverses every reveal without a timer.
+  const chapters = $$('.story-section');
+  const motionGroups = $$('.story-panel, .service-carousel');
   const limit = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
   const ease = value => value * value * (3 - 2 * value);
+  let chapterBounds = [], groupBounds = [], panelFrame = 0, panelLayoutFrame = 0;
+  let viewport = innerHeight;
   function resetPanels() {
-    motionPanels.forEach(panel => {
-      panel.classList.remove('story-drift');
-      panel.style.removeProperty('--story-y');
-      panel.style.removeProperty('--story-opacity');
+    document.documentElement.classList.remove('story-scroll-ready');
+    motionGroups.forEach(group => {
+      group.classList.remove('story-drift');
+      group.inert = false;
+      group.removeAttribute('aria-hidden');
+      group.style.removeProperty('--story-opacity');
+      group.querySelectorAll('.story-beat').forEach(beat => {
+        beat.classList.remove('story-beat');
+        beat.style.removeProperty('--beat-y');
+        beat.style.removeProperty('--beat-opacity');
+      });
     });
   }
+  function chapterGate(index, scroll) {
+    const incoming = index === 0 ? 1 : ease(limit((scroll - chapterBounds[index].boundary - viewport * .02) / (viewport * .14)));
+    const next = chapterBounds[index + 1];
+    const outgoing = next ? 1 - ease(limit((scroll - next.boundary + viewport * .14) / (viewport * .12))) : 1;
+    return Math.min(incoming, outgoing);
+  }
+  function readStory(scroll = scrollY) {
+    let index = 0;
+    while (index < chapterBounds.length - 1 && scroll >= chapterBounds[index + 1].boundary) index++;
+    const current = chapterBounds[index], next = chapterBounds[index + 1];
+    return {
+      index,
+      section: current?.section || chapters[0],
+      scene: current?.section.dataset.scene || 'bulb-right',
+      boundary: current?.boundary || 0,
+      nextBoundary: next?.boundary ?? Infinity,
+      sceneProgress: current ? limit((scroll - current.boundary) / Math.max(1, (next?.boundary ?? current.bottom) - current.boundary)) : 0,
+      gate: current ? chapterGate(index, scroll) : 1
+    };
+  }
+  window.edenStoryScroll = Object.freeze({ read: readStory });
   function updatePanels() {
     panelFrame = 0;
     if (reduced.matches || document.hidden) return;
-    const scroll = scrollY, viewport = innerHeight;
-    const focus = document.activeElement;
-    for (const item of panelBounds) {
-      const top = item.top - scroll, bottom = top + item.height;
-      const entering = ease(limit((viewport - top) / (viewport * .3)));
-      const leaving = ease(limit(bottom / (viewport * .18)));
-      const focused = item.section === focus || item.panel.contains(focus);
-      const opacity = focused ? 1 : .2 + .8 * Math.min(entering, leaving);
-      const parallax = limit((top + item.height * .5 - viewport * .5) * .025, -10, 10);
-      const y = focused ? 0 : (1 - entering) * 26 - (1 - leaving) * 14 + parallax;
-      const nextY = y.toFixed(1), nextOpacity = opacity.toFixed(3);
-      if (nextY !== item.y) { item.panel.style.setProperty('--story-y', nextY + 'px'); item.y = nextY; }
-      if (nextOpacity !== item.opacity) { item.panel.style.setProperty('--story-opacity', nextOpacity); item.opacity = nextOpacity; }
+    const scroll = scrollY;
+    for (const item of groupBounds) {
+      const gate = chapterGate(item.index, scroll);
+      const offstage = gate < .002;
+      if (offstage !== item.hidden) {
+        item.group.inert = offstage;
+        if (offstage) item.group.setAttribute('aria-hidden', 'true');
+        else item.group.removeAttribute('aria-hidden');
+        item.group.dataset.reading = offstage ? 'offstage' : 'onstage';
+        item.hidden = offstage;
+      }
+      const opacity = gate.toFixed(3);
+      if (opacity !== item.opacity) {
+        item.group.style.setProperty('--story-opacity', opacity);
+        item.opacity = opacity;
+      }
+      for (const beat of item.beats) {
+        // Start each line as it reaches the lower reading zone. Its final
+        // position is always its natural place in the page, never a sticky layer.
+        const entering = item.index === 0 ? 1 : ease(limit((viewport * .88 - (beat.top - scroll)) / (viewport * .22)));
+        const beatOpacity = entering.toFixed(3);
+        const y = ((1 - entering) * 24).toFixed(2);
+        if (beatOpacity !== beat.opacity) {
+          beat.node.style.setProperty('--beat-opacity', beatOpacity);
+          beat.opacity = beatOpacity;
+        }
+        if (y !== beat.y) {
+          beat.node.style.setProperty('--beat-y', y + 'px');
+          beat.y = y;
+        }
+      }
     }
   }
   function queuePanels() {
@@ -56,12 +104,22 @@
     panelLayoutFrame = 0;
     cancelAnimationFrame(panelFrame); panelFrame = 0;
     resetPanels();
-    if (reduced.matches) { panelBounds = []; return; }
-    panelBounds = motionPanels.map(panel => {
-      const bounds = panel.getBoundingClientRect();
-      return { panel, section: panel.closest('section'), top: bounds.top + scrollY, height: bounds.height, y: null, opacity: null };
+    viewport = innerHeight;
+    chapterBounds = chapters.map((section, index) => {
+      const rect = section.getBoundingClientRect();
+      const top = rect.top + scrollY;
+      return { section, top, bottom: top + rect.height, boundary: index === 0 ? 0 : top - viewport * .52 };
     });
-    motionPanels.forEach(panel => panel.classList.add('story-drift'));
+    if (reduced.matches) { groupBounds = []; return; }
+    groupBounds = motionGroups.map(group => {
+      const index = chapters.indexOf(group.closest('.story-section'));
+      const nodes = [...group.children].filter(node => !node.hidden);
+      const beats = nodes.map(node => ({ node, top: node.getBoundingClientRect().top + scrollY, opacity: null, y: null }));
+      group.classList.add('story-drift');
+      beats.forEach(beat => beat.node.classList.add('story-beat'));
+      return { group, index, beats, opacity: null, hidden: null };
+    });
+    document.documentElement.classList.add('story-scroll-ready');
     updatePanels();
   }
   function queuePanelLayout() {
@@ -69,13 +127,11 @@
   }
   addEventListener('scroll', queuePanels, { passive: true });
   addEventListener('resize', queuePanelLayout, { passive: true });
-  document.addEventListener('focusin', queuePanels);
-  document.addEventListener('focusout', queuePanels);
   document.addEventListener('visibilitychange', queuePanels);
   reduced.addEventListener('change', queuePanelLayout);
   if ('ResizeObserver' in window) {
     const panelLayout = new ResizeObserver(queuePanelLayout);
-    document.querySelectorAll('.story-section').forEach(section => panelLayout.observe(section));
+    chapters.forEach(section => panelLayout.observe(section));
   }
   measurePanels();
 
@@ -108,5 +164,6 @@
     }
   });
   showService(0);
+  queuePanelLayout();
 
 })();

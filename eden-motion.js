@@ -134,7 +134,7 @@
   }
   for (let i = 0; i < total; i++) {
     const p = points[i];
-    data.set([p.w, i < count ? (compact ? 6 + p.s * 4 : 10 + p.s * 6) : (compact ? 8 + p.s * 16 : 12 + p.s * 26), p.u * tau, i >= count ? 1 : 0], i * 4);
+    data.set([p.w, i < count ? (compact ? 6.5 + p.s * 4.5 : 11 + p.s * 7) : (compact ? 8 + p.s * 16 : 12 + p.s * 26), p.u * tau, i >= count ? 1 : 0], i * 4);
   }
   const scenes = {
     'bulb-right': { shape: 'bulb', x: .74, y: .51, size: .8, ry: -.08, rz: .34, opacity: 1, density: 1 },
@@ -173,24 +173,28 @@
   let renderer = null, atmosphere = null, isWebGL = false, contextLost = false, layoutFrame = 0;
   let quality = 1, slowTime = 0, lastQualityChange = 0, frameInterval = 16.67;
   let pointerX = 0, pointerY = 0, targetX = 0, targetY = 0, pointerOn = false, pointerStrength = 0;
-  let cameraX = 0, cameraY = 0, visualScroll = scrollY, timelineTime = 0, logoTime = 0, headerHeight = 88;
+  let cameraX = 0, cameraY = 0, timelineTime = 0, headerHeight = 88;
   const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, opacity: 1, density: 1, flow: 0, transition: 0, pose: 0, scroll: 0, time: 0, logo: 0, growth: 0, buildLogo: 0, buildGrowth: 0, actorOpacity: 1, drawCount: count };
   let artReady = false, activeScene = '', logoState = '';
   function sceneAt(scroll) {
     let i = 0;
-    while (i < stops.length - 1 && scroll > stops[i + 1].at) i++;
-    const from = stops[i], to = stops[Math.min(i + 1, stops.length - 1)];
-    const progress = from === to ? 0 : clamp((scroll - from.at) / Math.max(1, to.at - from.at));
-    params.a = scenes[from.name]; params.b = scenes[to.name];
-    // Hold a coherent silhouette, then release/gather; never stretch it for an entire scene.
-    const dispersing = !['scatter', 'ambient'].includes(params.a.shape) && ['scatter', 'ambient'].includes(params.b.shape);
-    const gathering = !['scatter', 'ambient'].includes(params.b.shape) && ['scatter', 'ambient'].includes(params.a.shape);
-    params.t = smooth(clamp((progress - (dispersing ? .29 : gathering ? .12 : .18)) / (dispersing ? .56 : gathering ? .74 : .66)));
-    params.pose = smooth(clamp((progress - .05) / .82));
-    params.transition = params.a.shape !== params.b.shape ? 1 : 0;
+    // The same reading boundary drives the copy. Scroll is the only assembly clock:
+    // reversing or stopping the document immediately reverses or stops the morph.
+    while (i < stops.length - 1 && scroll >= stops[i + 1].boundary) i++;
+    const current = stops[i], next = stops[i + 1];
+    const entering = i === 0 ? 1 : clamp((scroll - current.boundary) / (height * .18));
+    const leaving = next ? 1 - clamp((scroll - (next.boundary - height * .16)) / (height * .14)) : 1;
+    params.a = scenes.ambient; params.b = scenes[current.name];
+    params.t = Math.min(entering, leaving); params.pose = 1;
+    params.transition = ['scatter', 'ambient'].includes(params.b.shape) ? 0 : 1;
     params.flow = params.transition * Math.sin(params.t * Math.PI);
-    const name = progress < .5 ? from.name : to.name;
+    params.buildLogo = params.b.shape === 'logo' ? 1 : 0;
+    const name = current.name;
     if (activeScene !== name) { activeScene = name; canvas.dataset.scene = name; }
+    const assemblyState = params.buildLogo && params.t >= 1 ? 'formed' : params.buildLogo && params.t > 0 ? 'forming' : 'idle';
+    if (assemblyState !== logoState) { logoState = assemblyState; canvas.dataset.logo = assemblyState; }
+    const progressLabel = params.t.toFixed(3);
+    if (canvas.dataset.progress !== progressLabel) canvas.dataset.progress = progressLabel;
     return i;
   }
   const vertex = `
@@ -203,7 +207,7 @@
     uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField, uLogo, uGrowth, uBuildLogo, uBuildGrowth, uHeader;
     varying vec3 vColor;
     varying vec2 vSpin, vTilt;
-    varying float vAlpha;
+    varying float vAlpha, vStroke;
     void main() {
       float staggerRange = mix(.22, .42, max(uBuildLogo, uBuildGrowth)) * uTransition;
       float arrival = mix(aData.x, aData.x * .65 + clamp(.5 - aTo.y * .5, 0., 1.) * .35, uBuildLogo);
@@ -233,36 +237,38 @@
         float perspective = 4.5 / (4.5 - p.z);
         vec2 pixel = uCenter + vec2(p.x, -p.y) * uScale * perspective;
         vec2 delta = pixel - uPointer;
-        // Rotate locally about the cursor: the radius is preserved, so no empty hole opens.
-        float influence = 1. - smoothstep(0., 135., length(delta));
-        float cursorAngle = influence * .028 * uPointerStrength;
-        float cursorC = cos(cursorAngle), cursorS = sin(cursorAngle);
-        pixel = uPointer + mat2(cursorC, cursorS, -cursorS, cursorC) * delta;
+        float influence = 1. - smoothstep(0., 160., length(delta));
+        focus = influence * uPointerStrength;
+        // Lift a patch toward the viewer, along the shape's surface. No force
+        // pushes points away from the cursor; the silhouette gains actual relief.
+        p.z += focus * (.38 + .22 * aData.x) * mix(1., .18, uField);
+        perspective = 4.5 / (4.5 - p.z);
+        pixel = uCenter + vec2(p.x, -p.y) * uScale * perspective;
         vec2 clip = pixel / uViewport * 2. - 1.;
         gl_Position = vec4(clip.x, -clip.y, 0., 1.);
-        focus = influence * uPointerStrength;
-        float magnify = focus * (1.4 + .8 * aData.x);
+        float magnify = focus * (.65 + 1.35 * aData.x);
         float depthSize = clamp(.7 + p.z * .20, .32, 1.35);
         gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField) * mix(1., .64, max(uLogo, uGrowth)) * (1. + magnify);
         float presence = 1. - smoothstep(uDensity - .06, uDensity + .06, aData.x);
-        vAlpha = clamp(.6 + p.z * .42, .10, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
+        vAlpha = clamp(.72 + p.z * .32, .14, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
         vAlpha = mix(vAlpha, uOpacity * presence * .96, uLogo);
-        vAlpha = min(1., vAlpha * (1. + focus * .8));
+        vAlpha = min(1., vAlpha * (1. + focus * .22));
         vAlpha *= smoothstep(uHeader * .35, uHeader + 20., pixel.y);
         if (presence < .001) { gl_Position = vec4(3., 3., 0., 1.); gl_PointSize = 1.; }
       }
       float angle = aData.z + uTime * (.085 + aData.x * .085);
+      vStroke = clamp(2.0 * uDpr / max(1., gl_PointSize), .025, .21);
       vSpin = vec2(cos(angle), sin(angle));
       vTilt = vec2(.77 + .23 * sin(uTime * .19 + aData.z), .82 + .18 * cos(uTime * .17 + aData.z));
       vColor = mix(aColorFrom, aColorTo, localMix);
-      vColor = mix(vColor, min(vec3(1.), vColor * 1.5 + .10), focus * .7);
+      vColor = min(vec3(1.), vColor * (1. + focus * .16));
     }
   `;
   const fragment = `
     precision mediump float;
     varying vec3 vColor;
     varying vec2 vSpin, vTilt;
-    varying float vAlpha;
+    varying float vAlpha, vStroke;
     void main() {
       vec2 p = (gl_PointCoord - .5) * 2.8;
       p = mat2(vSpin.x, -vSpin.y, vSpin.y, vSpin.x) * p;
@@ -270,8 +276,8 @@
       float edge = min(p.y + .48, (.94 - p.y - 1.73205 * abs(p.x)) * .5);
       if (edge < -.035) discard;
       float outer = smoothstep(-.035, .025, edge);
-      float line = 1. - smoothstep(.045, .21, edge);
-      gl_FragColor = vec4(vColor, outer * (line * .94 + .045) * vAlpha);
+      float line = 1. - smoothstep(vStroke * .24, vStroke, edge);
+      gl_FragColor = vec4(vColor, outer * (line * .97 + .018) * vAlpha);
     }
   `;
   function webglRenderer(gl) {
@@ -329,7 +335,7 @@
         gl.uniform1f(uniforms.Mix, t); gl.uniform1f(uniforms.Scale, params.scale);
         gl.uniform1f(uniforms.Opacity, params.opacity * params.actorOpacity); gl.uniform1f(uniforms.Density, params.density);
         gl.uniform1f(uniforms.Flow, params.flow); gl.uniform1f(uniforms.Transition, params.transition);
-        gl.uniform1f(uniforms.PointerStrength, pointerStrength * (1 - Math.max(params.logo, params.growth))); gl.uniform1f(uniforms.Logo, params.logo);
+        gl.uniform1f(uniforms.PointerStrength, pointerStrength * (1 - Math.max(params.logo, params.growth) * .65)); gl.uniform1f(uniforms.Logo, params.logo);
         gl.uniform1f(uniforms.Growth, params.growth); gl.uniform1f(uniforms.BuildLogo, params.buildLogo); gl.uniform1f(uniforms.BuildGrowth, params.buildGrowth);
         gl.uniform1f(uniforms.Field, mix(a.shape === 'scatter' || a.shape === 'ambient' ? 1 : 0, b.shape === 'scatter' || b.shape === 'ambient' ? 1 : 0, t));
         gl.drawArrays(gl.POINTS, 0, params.drawCount);
@@ -486,29 +492,30 @@
         const depth = mix(from[index + 2], to[index + 2], q) + Math.sin(winding * .8 + p.w * 5) * path * pathSize;
         const tiltC = Math.cos(params.rotationX), tiltS = Math.sin(params.rotationX);
         const z0 = depth * tiltC - y * tiltS; y = y * tiltC + depth * tiltS;
-        const z = z0 * ca - x * sa;
+        let z = z0 * ca - x * sa;
         x = x * ca + z0 * sa;
         const rotatedX = x * cr - y * sr; y = x * sr + y * cr;
-        const perspective = 4.5 / (4.5 - z);
+        let perspective = 4.5 / (4.5 - z);
         let px = ambient ? p.u * width : cx + rotatedX * scale * perspective;
         let py = ambient ? p.v * height : cy - y * scale * perspective;
         let focus = 0;
         if (!ambient && !reduced.matches && pointerStrength > .01) {
           const dx = px - pointerX, dy = py - pointerY, distance = Math.hypot(dx, dy);
-          if (distance < 135) {
-            const influence = 1 - smooth(clamp(distance / 135)); focus = influence * pointerStrength * (1 - Math.max(params.logo, params.growth));
-            const angle = influence * .028 * pointerStrength, c = Math.cos(angle), s = Math.sin(angle);
-            px = pointerX + dx * c - dy * s; py = pointerY + dx * s + dy * c;
+          if (distance < 160) {
+            const influence = 1 - smooth(clamp(distance / 160)); focus = influence * pointerStrength * (1 - Math.max(params.logo, params.growth) * .65);
+            z += focus * (.38 + .22 * p.w);
+            perspective = 4.5 / (4.5 - z);
+            px = cx + rotatedX * scale * perspective; py = cy - y * scale * perspective;
           }
         }
-        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective) * mix(1, .64, Math.max(params.logo, params.growth)) * (1 + focus * (1.4 + .8 * p.w));
+        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective) * mix(1, .64, Math.max(params.logo, params.growth)) * (1 + focus * (.65 + 1.35 * p.w));
         const presence = 1 - smooth(clamp((p.w - params.density + .06) / .12));
         if (!ambient && presence < .001) continue;
         const cr0 = Math.round(mix(fromColor[index], toColor[index], q) * 255);
         const cg0 = Math.round(mix(fromColor[index + 1], toColor[index + 1], q) * 255);
         const cb0 = Math.round(mix(fromColor[index + 2], toColor[index + 2], q) * 255);
         ctx.strokeStyle = params.transition ? `rgb(${cr0},${cg0},${cb0})` : css[i];
-        ctx.globalAlpha = ambient ? .17 : clamp(clamp(.6 + z * .42, .15, 1) * opacity * presence * params.actorOpacity * (1 + focus * .8));
+        ctx.globalAlpha = ambient ? .17 : clamp(clamp(.72 + z * .32, .14, 1) * opacity * presence * params.actorOpacity * (1 + focus * .22));
         ctx.beginPath();
         for (let k = 0; k < 3; k++) {
           const sx = spinX[index + k], sy = spinY[index + k];
@@ -540,7 +547,8 @@
   function measureStops() {
     stops = sections.map(section => {
       const panel = section.querySelector('.story-panel');
-      return { name: section.dataset.scene, at: section.getBoundingClientRect().top + scrollY, panelTop: panel ? panel.getBoundingClientRect().top + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0, panelBottom: panel ? panel.getBoundingClientRect().bottom + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0 };
+      const top = section.getBoundingClientRect().top + scrollY;
+      return { name: section.dataset.scene, at: top, boundary: Math.max(0, top - height * .52), panelTop: panel ? panel.getBoundingClientRect().top + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0, panelBottom: panel ? panel.getBoundingClientRect().bottom + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0 };
     });
   }
   function setResolution() {
@@ -559,20 +567,7 @@
   function draw(now, delta) {
     if (!renderer || contextLost || !stops.length) return;
     const elapsed = Math.min(delta, 50);
-    visualScroll = reduced.matches ? scrollY : mix(visualScroll, scrollY, 1 - Math.exp(-elapsed / 105));
-    if (Math.abs(visualScroll - scrollY) < .1) visualScroll = scrollY;
-    const scroll = visualScroll, i = sceneAt(scroll);
-    const finalStop = stops[stops.length - 1];
-    const logoOnstage = finalStop.panelTop - scroll < height * .72 && finalStop.panelBottom - scroll > headerHeight;
-    logoTime = reduced.matches ? (logoOnstage ? 2200 : 0) : clamp(logoTime + (logoOnstage ? elapsed : -elapsed * 2), 0, 2200);
-    const assemblyState = logoTime >= 2200 ? 'formed' : logoTime > 0 ? 'forming' : 'idle';
-    if (assemblyState !== logoState) { logoState = assemblyState; canvas.dataset.logo = assemblyState; }
-    params.buildLogo = 0;
-    if (params.a.shape === 'logo' || params.b.shape === 'logo') {
-      params.a = scenes.ambient; params.b = scenes.ribbon;
-      params.t = logoTime / 2200; params.pose = 1;
-      params.transition = 1; params.flow = Math.sin(params.t * Math.PI); params.buildLogo = 1;
-    }
+    const scroll = scrollY, i = sceneAt(scroll);
     const a = params.a, b = params.b, t = params.t, pose = params.pose;
     const mobile = width <= 760;
     params.time = reduced.matches ? 0 : timelineTime; params.scroll = scroll;
@@ -580,14 +575,12 @@
     params.cy = height * mix(a.y, b.y, pose);
     params.scale = (mobile ? Math.min(width * .39, height * .23) : Math.min(width * .275, height * .445)) * mix(a.size, b.size, pose);
     if (mobile) {
-      const from = stops[i], to = stops[Math.min(i + 1, stops.length - 1)];
+      const current = stops[i];
       const offset = 45 + params.scale * 1.15;
-      const fromY = a.shape === 'scatter' || a.shape === 'ambient' ? height * .52 : from.panelBottom - scroll + offset;
-      const toY = b.shape === 'scatter' || b.shape === 'ambient' ? height * .52 : to.panelBottom - scroll + offset;
-      params.cy = mix(fromY, toY, pose);
+      params.cy = b.shape === 'scatter' || b.shape === 'ambient' ? height * .52 : current.panelBottom - scroll + offset;
     }
     if (reduced.matches) { cameraX = 0; cameraY = 0; pointerStrength = 0; }
-    const follow = 1 - Math.exp(-elapsed / 170);
+    const follow = 1 - Math.exp(-elapsed / 85);
     const targetCameraX = pointerOn && !reduced.matches ? targetX / width * 2 - 1 : 0;
     const targetCameraY = pointerOn && !reduced.matches ? 1 - targetY / height * 2 : 0;
     cameraX += (targetCameraX - cameraX) * follow; cameraY += (targetCameraY - cameraY) * follow;
