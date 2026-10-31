@@ -18,31 +18,52 @@
   const color = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
   const gold = color('#edbe34'), white = color('#e8e3ef'), purple = color('#8951e9'), teal = color('#238d84'), navy = color('#456cae');
   const palette = [gold, white, purple, teal, navy];
+  const pink = color('#d78dab');
   const glyphCorners = [[0, .86, 0], [-.75, -.43, .16], [.75, -.43, .16], [0, -.04, -.75]];
   const glyphEdges = [[0, 1], [1, 2], [2, 0], [0, 3], [1, 3], [2, 3]];
   const points = Array.from({ length: total }, () => ({ u: random(), v: random(), w: random(), s: random() }));
+  // Preserve point identities, but never derive the diffuse field from the lamp's UVs.
+  // Reusing p.v with the opposite Y direction made the entire cloud collapse to a line.
+  for (const point of points) { point.fx = random(); point.fy = random(); point.fz = random(); }
   const positions = {}, colors = {}, data = new Float32Array(total * 4);
   const blendColor = (a, b, t) => a.map((value, i) => mix(value, b[i], smooth(clamp(t))));
   function surface(name, p) {
     const u = p.u * tau;
     if (name === 'bulb') {
-      if (p.v < .72) {
-        const y = 1.1 - p.v / .72 * 1.7;
-        const r = y >= -.15 ? .8 * Math.sqrt(Math.max(0, 1 - ((y - .3) / .8) ** 2)) : mix(.6614, .27, smooth(clamp((-.15 - y) / .45)));
+      if (p.v < .84) {
+        const y = 1.1 - p.v / .84 * 1.95;
+        const r = y >= -.15 ? .8 * Math.sqrt(Math.max(0, 1 - ((y - .3) / .8) ** 2)) : mix(.6614, .25, smooth(clamp((-.15 - y) / .70)));
         return [Math.cos(u) * r, y, Math.sin(u) * r];
       }
-      const t = (p.v - .72) / .28;
-      const r = t < .75 ? .27 + .024 * Math.sin(t * 54) : .27 * Math.sqrt((1 - t) / .25);
-      return [Math.cos(u) * r, -.6 - t * .65, Math.sin(u) * r];
+      const t = (p.v - .84) / .16;
+      const r = t < .75 ? .25 + .02 * Math.sin(t * 54) : .25 * Math.sqrt((1 - t) / .25);
+      return [Math.cos(u) * r, -.85 - t * .45, Math.sin(u) * r];
     }
-    if (name === 'ribbon') {
-      const t = p.u * tau * 1.75, band = (p.v - .5) * .9;
-      const r = .46 + band * Math.cos(t * .65);
-      return [Math.cos(t) * r, (p.u - .5) * 2.6 + band * Math.sin(t * .65), Math.sin(t) * r];
+    if (name === 'sculpture') {
+      // Three curved, open sheets around a vertical spine, not a spiral tube.
+      const radius = Math.sqrt(p.v), angle = p.u * Math.PI * .5;
+      if (p.s < .46) {
+        const x = -.28 + .98 * radius * Math.cos(angle);
+        const y = .08 + 1.22 * radius * Math.sin(angle);
+        const z = .18 + .24 * radius * Math.sin(angle * 2) - .55 * radius * radius;
+        return [x, y, z];
+      }
+      if (p.s < .64) {
+        const x = -.28 - .61 * p.u, y = -.26 + .42 * p.v;
+        return [x, y, .1 + .3 * Math.sin(p.u * Math.PI) + .16 * Math.cos(p.v * Math.PI)];
+      }
+      const x = -.28 + 1.02 * radius * Math.cos(angle);
+      const y = -.29 - .85 * radius * Math.sin(angle);
+      const z = .42 * (1 - radius * radius) + .28 * radius * Math.cos(angle) - .15;
+      return [x, y, z];
     }
-    return [(p.u - .5) * 4.6, (p.v - .5) * 3.1, (p.w - .5) * 2.8];
+    // An ellipsoidal volume has no visible rectangular boundary and stays full in 3D.
+    const latitude = p.fy * 2 - 1, angle = p.fx * tau;
+    const shell = Math.sqrt(Math.max(0, 1 - latitude * latitude));
+    const radius = Math.cbrt(.08 + p.fz * .92);
+    return [Math.cos(angle) * shell * radius * 2.65, latitude * radius * 1.8, Math.sin(angle) * shell * radius * 2.05];
   }
-  for (const name of ['bulb', 'scatter', 'ribbon', 'ambient']) {
+  for (const name of ['bulb', 'scatter', 'sculpture', 'ambient']) {
     const xyz = new Float32Array(total * 3), rgb = new Float32Array(total * 3);
     for (let i = 0; i < total; i++) {
       const p = points[i];
@@ -56,7 +77,17 @@
           : y > -.55 ? blendColor(purple, white, (y + .55) / .9)
           : blendColor(teal, purple, (y + 1.25) / .7);
       }
-      if (name === 'ribbon') { c = palette[Math.min(4, Math.floor(p.u * 5))]; brightness = .45; }
+      if (name === 'sculpture') {
+        if (p.s < .46) {
+          c = pos[1] > .66 ? blendColor(navy, teal, (pos[1] - .66) / .64) : blendColor(purple, navy, (pos[1] - .08) / .58);
+          brightness = .38;
+        } else if (p.s < .64) { c = blendColor(purple, navy, p.u); brightness = .5; }
+        else {
+          c = blendColor(pink, gold, (pos[0] + .28) / 1.02);
+          c = blendColor(c, white, (1 - clamp((-pos[1] - .29) / .25)) * .7);
+          brightness = .9;
+        }
+      }
       if (i >= count) { pos = [(p.u - .5) * 2.2, (p.v - .5) * 2.2, p.w]; c = palette[i % palette.length]; brightness = 1; }
       xyz.set(pos, i * 3);
       rgb[i * 3] = c[0] * brightness; rgb[i * 3 + 1] = c[1] * brightness; rgb[i * 3 + 2] = c[2] * brightness;
@@ -68,11 +99,11 @@
     data.set([p.w, i < count ? (compact ? 6 + p.s * 4 : 10 + p.s * 6) : (compact ? 8 + p.s * 16 : 12 + p.s * 26), p.u * tau, i >= count ? 1 : 0], i * 4);
   }
   const scenes = {
-    'bulb-right': { shape: 'bulb', x: .73, y: .5, size: .82, ry: -.15, rz: -.18, opacity: 1, density: 1 },
+    'bulb-right': { shape: 'bulb', x: .74, y: .51, size: .8, ry: -.08, rz: .34, opacity: 1, density: 1 },
     scatter: { shape: 'scatter', x: .5, y: .5, size: 1.2, ry: .1, rz: 0, opacity: .46, density: .65 },
-    bulb: { shape: 'bulb', x: .29, y: .53, size: .86, ry: .2, rz: .25, opacity: 1, density: 1 },
+    bulb: { shape: 'bulb', x: .29, y: .50, size: .84, ry: .14, rz: .40, opacity: 1, density: 1 },
     ambient: { shape: 'ambient', x: .5, y: .5, size: 1.4, ry: .3, rz: 0, opacity: .25, density: .13 },
-    ribbon: { shape: 'ribbon', x: .5, y: .5, size: .88, ry: .4, rz: -.2, opacity: .48, density: .8 }
+    ribbon: { shape: 'sculpture', x: .47, y: .46, size: .68, ry: .12, rz: 0, opacity: .86, density: 1 }
   };
   let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, shapePair = '';
   let renderer = null, atmosphere = null, isWebGL = false, contextLost = false, layoutFrame = 0;
@@ -105,7 +136,7 @@
     uniform vec2 uViewport, uCenter, uPointer;
     uniform vec4 uRotation;
     uniform vec2 uTilt;
-    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength;
+    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField;
     varying vec3 vColor;
     varying vec2 vSpin, vTilt;
     varying float vAlpha;
@@ -136,9 +167,10 @@
         pixel += normalize(delta + .001) * force * force * 28. * uPointerStrength;
         vec2 clip = pixel / uViewport * 2. - 1.;
         gl_Position = vec4(clip.x, -clip.y, 0., 1.);
-        gl_PointSize = aData.y * uDpr * perspective;
+        float depthSize = clamp(.7 + p.z * .20, .32, 1.35);
+        gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField);
         float presence = 1. - smoothstep(uDensity - .06, uDensity + .06, aData.x);
-        vAlpha = clamp(.6 + p.z * .42, .15, 1.) * uOpacity * presence;
+        vAlpha = clamp(.6 + p.z * .42, .10, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
         if (presence < .001) { gl_Position = vec4(3., 3., 0., 1.); gl_PointSize = 1.; }
       }
       float angle = aData.z + uTime * (.085 + aData.x * .085);
@@ -174,7 +206,7 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
     const uniforms = {};
-    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
+    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
     const locations = {}, buffers = {};
     for (const name of ['From', 'To', 'ColorFrom', 'ColorTo', 'Data']) {
       locations[name] = gl.getAttribLocation(program, 'a' + name); gl.enableVertexAttribArray(locations[name]);
@@ -208,6 +240,7 @@
       gl.uniform2f(uniforms.Tilt, Math.cos(params.rotationX), Math.sin(params.rotationX));
       gl.uniform1f(uniforms.Density, params.density); gl.uniform1f(uniforms.Flow, params.flow);
       gl.uniform1f(uniforms.Transition, params.transition); gl.uniform1f(uniforms.PointerStrength, pointerStrength);
+      gl.uniform1f(uniforms.Field, mix(a.shape === 'scatter' || a.shape === 'ambient' ? 1 : 0, b.shape === 'scatter' || b.shape === 'ambient' ? 1 : 0, t));
       gl.drawArrays(gl.POINTS, 0, params.drawCount);
       if (atmosphere) atmosphere();
     };

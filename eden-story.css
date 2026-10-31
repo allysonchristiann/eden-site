@@ -216,3 +216,8 @@ body.dialog-open { overflow: hidden; }
 }
 
 .arrow-icon { display: block; flex: 0 0 auto; }
+
+/* Keep the closing message legible over the sculpture's brighter lower sheet. */
+.final-copy h2, .final-copy .body-copy, .final-copy .eyebrow {
+  text-shadow: 0 2px 8px #000, 0 0 24px #000;
+}
