@@ -8,75 +8,97 @@
   const ctx = canvas.getContext("2d", { alpha: true });
   if (!ctx) return;
 
-  const mobile = matchMedia("(max-width: 700px)").matches;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mobile = matchMedia("(max-width: 700px)").matches;
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const palette = [
-    "#e7c47c", "#d4a860", "#f2dbaa",
-    "#91adc8", "#537bad", "#e2e7ed"
-  ];
+  const W = 520, H = 640;
+  const mask = document.createElement("canvas");
 
-  const total = reduced ? 1100 : mobile ? 900 : 3100;
-  const points = [];
+  mask.width = W;
+  mask.height = H;
 
-  let w = 1, h = 1, raf = 0, active = false, last = 0;
-  let twistX = 0, twistY = 0, scrollShift = 0;
+  const m = mask.getContext("2d", { willReadFrequently: true });
+  if (!m) return;
 
-  const pointer = {
-    x: -1000, y: -1000,
-    strength: 0, target: 0
-  };
+  // Silhueta geometrica da lampada.
+  function glassPath(c) {
+    c.beginPath();
+    c.moveTo(260, 33);
+    c.bezierCurveTo(129, 33, 59, 132, 73, 252);
+    c.bezierCurveTo(78, 330, 128, 374, 165, 412);
+    c.bezierCurveTo(190, 439, 193, 450, 194, 464);
+    c.lineTo(326, 464);
+    c.bezierCurveTo(327, 450, 330, 439, 355, 412);
+    c.bezierCurveTo(392, 374, 442, 330, 447, 252);
+    c.bezierCurveTo(461, 132, 391, 33, 260, 33);
+    c.closePath();
+  }
 
-  for (let i = 0; i < total; i++) {
-    let x, y, z;
+  m.fillStyle = "#fff";
+  glassPath(m);
+  m.fill();
 
-    if (Math.random() < .81) {
-      const az = rand(0, Math.PI * 2);
-      const polar = Math.acos(rand(-1, 1));
-      const shell = Math.random() < .74
-        ? rand(.84, 1.06)
-        : rand(.26, .96);
+  m.beginPath();
+  m.roundRect(194, 458, 132, 113, 12);
+  m.fill();
 
-      const organic = 1 + .07 * Math.sin(az * 5 + polar * 4);
+  m.beginPath();
+  m.roundRect(213, 565, 94, 25, 11);
+  m.fill();
 
-      x = -.16 + Math.sin(polar) * Math.cos(az) *
-          shell * .97 * organic;
+  m.beginPath();
+  m.roundRect(231, 584, 58, 21, 10);
+  m.fill();
 
-      y = -.20 + Math.cos(polar) *
-          shell * .96 * organic;
+  const alpha = m.getImageData(0, 0, W, H).data;
+  const particles = [];
+  const count = reduced ? 2300 : mobile ? 2000 : 4200;
 
-      z = Math.sin(polar) * Math.sin(az) *
-          shell * .72;
-    } else {
-      const t = Math.pow(Math.random(), .77);
-      const radius = (1 - t) * .27 + .07;
+  // As particulas sao criadas dentro da silhueta.
+  for (let i = 0; i < count; i++) {
+    let x = 0, y = 0, trial = 0;
 
-      x = .19 + t * .53 + rand(-radius, radius);
-      y = .29 + t * .88 + rand(-radius, radius);
-      z = rand(-radius, radius) * 1.6;
-    }
+    do {
+      x = rand(66, 454);
+      y = rand(31, 605);
+      trial++;
+    } while (
+      alpha[(Math.floor(y) * W + Math.floor(x)) * 4 + 3] < 100 &&
+      trial < 300
+    );
 
-    points.push({
-      x, y, z,
-      ox: 0, oy: 0,
-      size: rand(.75, 2.7),
-      speed: rand(.55, 1.35),
+    if (trial >= 300) continue;
+
+    const base = y > 465;
+
+    particles.push({
+      x, y, base,
+      s: rand(.75, base ? 1.9 : 2.2),
       phase: rand(0, Math.PI * 2),
-      hue: Math.random(),
-      fill: Math.random() < .23
+      speed: rand(.5, 1.4),
+      shade: rand(0, 1),
+      dx: 0, dy: 0,
+      vx: 0, vy: 0,
+      fill: Math.random() < .19
     });
   }
 
   const dust = Array.from({
-    length: mobile ? 55 : 130
+    length: mobile ? 45 : 100
   }, () => ({
-    x: Math.random(),
-    y: Math.random(),
-    size: rand(.5, 2.3),
-    color: palette[Math.floor(Math.random() * palette.length)],
-    phase: rand(0, Math.PI * 2)
+    x: rand(0, 1),
+    y: rand(0, 1),
+    s: rand(.8, 2.4),
+    phase: rand(0, 7)
   }));
+
+  let w = 1, h = 1, scale = 1, ox = 0, oy = 0;
+  let raf = 0, active = false;
+
+  let pointerX = -10000;
+  let pointerY = -10000;
+  let pointerActive = false;
 
   function resize() {
     const r = stage.getBoundingClientRect();
@@ -86,25 +108,29 @@
 
     const dpr = Math.min(
       devicePixelRatio || 1,
-      mobile ? 1.4 : 1.65
+      mobile ? 1.4 : 1.8
     );
 
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
-
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    paint(performance.now());
+
+    scale = Math.min(w / W * .97, h / H * .98);
+    ox = (w - W * scale) / 2;
+    oy = (h - H * scale) / 2;
+
+    render(performance.now());
   }
 
-  function triangle(x, y, radius, color, rotation, filled) {
+  function triangle(x, y, s, color, angle, filled) {
     ctx.beginPath();
 
-    for (let k = 0; k < 3; k++) {
-      const a = rotation + k * Math.PI * 2 / 3;
-      const xx = x + Math.cos(a) * radius;
-      const yy = y + Math.sin(a) * radius;
+    for (let i = 0; i < 3; i++) {
+      const a = angle + i * 2 * Math.PI / 3;
+      const xx = x + Math.cos(a) * s;
+      const yy = y + Math.sin(a) * s;
 
-      if (k === 0) ctx.moveTo(xx, yy);
+      if (i === 0) ctx.moveTo(xx, yy);
       else ctx.lineTo(xx, yy);
     }
 
@@ -119,135 +145,148 @@
     }
   }
 
-  function paint(now) {
+  function render(time) {
     ctx.clearRect(0, 0, w, h);
 
-    const t = now * .001;
-    const smooth = reduced ? 0 : Math.sin(t * .12);
-
-    const scale = Math.min(w * .37, h * .42);
-    const cx = w * .48;
-    const cy = h * .47;
-
-    pointer.strength +=
-      (pointer.target - pointer.strength) * .075;
-
-    twistY += (
-      ((pointer.x / w - .5) * .26 * pointer.strength || 0) -
-      twistY
-    ) * .025;
-
-    twistX += (
-      ((pointer.y / h - .5) * .16 * pointer.strength || 0) -
-      twistX
-    ) * .025;
-
-    const yaw = smooth * .17 + twistY + scrollShift * .34;
-    const pitch = Math.cos(t * .14) * .10 + twistX;
-
-    const cosY = Math.cos(yaw);
-    const sinY = Math.sin(yaw);
-    const cosX = Math.cos(pitch);
-    const sinX = Math.sin(pitch);
+    const t = time * .001;
+    const middleX = w * .5;
+    const middleY = h * .42;
 
     const glow = ctx.createRadialGradient(
-      cx, cy, 7, cx, cy, scale * 1.25
+      middleX, middleY, 8,
+      middleX, middleY, Math.min(w, h) * .55
     );
 
-    glow.addColorStop(0, "rgba(21,49,86,.24)");
-    glow.addColorStop(.65, "rgba(10,31,65,.10)");
+    glow.addColorStop(0, "rgba(216,180,116,.095)");
+    glow.addColorStop(.6, "rgba(16,42,83,.08)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
 
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, w, h);
-    ctx.lineWidth = .83;
+    ctx.lineWidth = .8;
 
+    // Particulas ambientais.
     for (const d of dust) {
-      const dx = d.x * w + (
-        reduced ? 0 : Math.sin(t * .16 + d.phase) * 8
-      );
-
-      const dy = d.y * h + (
-        reduced ? 0 : Math.cos(t * .22 + d.phase) * 6
-      );
-
-      ctx.globalAlpha = .12 +
-        .13 * (Math.sin(t * .6 + d.phase) + 1) / 2;
+      ctx.globalAlpha = .09 +
+        .10 * (Math.sin(t * .6 + d.phase) + 1) / 2;
 
       triangle(
-        dx, dy, d.size, d.color, d.phase, false
+        d.x * w, d.y * h,
+        d.s, "#d8b474",
+        d.phase + t * .04, false
       );
     }
 
-    for (const p of points) {
-      const yy = p.y + (
-        reduced ? 0 :
-        Math.sin(t * .25 * p.speed + p.phase) * .013
-      );
+    // Contorno sutil da lampada.
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
 
-      const xx = p.x + (
-        reduced ? 0 :
-        Math.cos(t * .23 * p.speed + p.phase) * .013
-      );
+    ctx.globalAlpha = .17;
+    ctx.strokeStyle = "#d5b677";
+    ctx.lineWidth = 1.3;
 
-      const xr = xx * cosY - p.z * sinY;
-      const zr = xx * sinY + p.z * cosY;
-      const yr = yy * cosX - zr * sinX;
-      const depth = yy * sinX + zr * cosX;
+    glassPath(ctx);
+    ctx.stroke();
 
-      const perspective = 2.4 / (2.4 - depth * .40);
+    ctx.beginPath();
+    ctx.roundRect(194, 458, 132, 113, 12);
+    ctx.stroke();
 
-      const px = cx + xr * scale * perspective;
-      const py = cy + yr * scale * perspective;
+    ctx.beginPath();
+    ctx.roundRect(213, 565, 94, 25, 11);
+    ctx.stroke();
 
-      let goalX = 0;
-      let goalY = 0;
+    ctx.beginPath();
+    ctx.roundRect(231, 584, 58, 21, 10);
+    ctx.stroke();
 
-      if (pointer.strength > .015) {
-        const dx = px - pointer.x;
-        const dy = py - pointer.y;
+    ctx.restore();
+
+    // Filamento e detalhes da base.
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.scale(scale, scale);
+
+    ctx.globalAlpha = .24;
+    ctx.strokeStyle = "#d8b474";
+    ctx.lineWidth = 1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(219, 448);
+    ctx.lineTo(220, 365);
+    ctx.lineTo(237, 335);
+    ctx.lineTo(260, 357);
+    ctx.lineTo(283, 335);
+    ctx.lineTo(300, 365);
+    ctx.lineTo(301, 448);
+    ctx.stroke();
+
+    for (const yy of [488, 514, 540, 564]) {
+      ctx.beginPath();
+      ctx.moveTo(202, yy);
+      ctx.lineTo(318, yy);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    const reach = mobile ? 66 : 110;
+
+    // Repulsao local das particulas pelo mouse.
+    for (const p of particles) {
+      const drift = reduced ? 0 :
+        Math.sin(t * .45 * p.speed + p.phase) * 2.5;
+
+      let x = ox + (p.x + drift) * scale;
+      let y = oy + (
+        p.y + (reduced ? 0 :
+        Math.cos(t * .37 + p.phase) * 2)
+      ) * scale;
+
+      let tx = 0, ty = 0;
+
+      if (pointerActive && !reduced) {
+        const dx = x - pointerX;
+        const dy = y - pointerY;
         const dist = Math.hypot(dx, dy);
-        const reach = mobile ? 92 : 148;
 
         if (dist < reach) {
-          const power = Math.pow(
-            1 - dist / reach, 2
-          ) * pointer.strength;
+          const force = Math.pow(1 - dist / reach, 2);
+          const distance = Math.max(dist, 1);
 
-          const dirX = dx / Math.max(dist, 1);
-          const dirY = dy / Math.max(dist, 1);
+          tx = (dx / distance * 78 -
+                dy / distance * 31) * force;
 
-          const spiral = 30 * power;
-          const push = 95 * power;
-
-          goalX = dirX * push - dirY * spiral;
-          goalY = dirY * push + dirX * spiral;
+          ty = (dy / distance * 78 +
+                dx / distance * 31) * force;
         }
       }
 
-      p.ox += (goalX - p.ox) * (reduced ? 1 : .17);
-      p.oy += (goalY - p.oy) * (reduced ? 1 : .17);
+      // Inercia para retornar suavemente.
+      p.vx = (p.vx + (tx - p.dx) * .15) * .74;
+      p.vy = (p.vy + (ty - p.dy) * .15) * .74;
 
-      const posX = px + p.ox;
-      const posY = py + p.oy;
+      p.dx += p.vx;
+      p.dy += p.vy;
 
-      const size = p.size *
-        (.85 + Math.max(0, depth) * .60) *
-        perspective;
+      x += p.dx;
+      y += p.dy;
 
-      ctx.globalAlpha = Math.min(
-        1, .46 + depth * .22 + p.hue * .37
-      );
+      const color = p.base
+        ? "#b8c8df"
+        : p.y < 270
+          ? (p.shade < .70 ? "#e4c57e" : "#f5dfb3")
+          : (p.shade < .52 ? "#d8b474" : "#7b9bc7");
 
-      const color = yr < -.25
-        ? palette[Math.floor(p.hue * 3)]
-        : yr < .4
-          ? palette[Math.floor(p.hue * 4)]
-          : palette[3 + Math.floor(p.hue * 3)];
+      ctx.globalAlpha = p.base
+        ? .65
+        : .45 + p.shade * .48;
 
       triangle(
-        posX, posY, size, color,
-        p.phase + t * .10 * p.speed,
+        x, y, p.s * scale * 1.4,
+        color,
+        p.phase + t * .11 * p.speed,
         p.fill
       );
     }
@@ -255,90 +294,93 @@
     ctx.globalAlpha = 1;
   }
 
-  function animate(now) {
+  function step(time) {
     if (!active) return;
 
-    if (!mobile || now - last > 28) {
-      paint(now);
-      last = now;
-    }
-
-    raf = requestAnimationFrame(animate);
+    render(time);
+    raf = requestAnimationFrame(step);
   }
 
-  function play(visible) {
+  function play(value) {
     cancelAnimationFrame(raf);
 
-    active = Boolean(visible) &&
+    active = Boolean(value) &&
       !reduced && !document.hidden;
 
-    if (active) raf = requestAnimationFrame(animate);
-    else paint(performance.now());
+    if (active) raf = requestAnimationFrame(step);
+    else render(performance.now());
   }
-
-  stage.addEventListener("pointerenter", e => {
-    if (e.pointerType === "touch") return;
-
-    const r = stage.getBoundingClientRect();
-    pointer.x = e.clientX - r.left;
-    pointer.y = e.clientY - r.top;
-    pointer.target = 1;
-  });
 
   stage.addEventListener("pointermove", e => {
     if (e.pointerType === "touch") return;
 
     const r = stage.getBoundingClientRect();
-    pointer.x = e.clientX - r.left;
-    pointer.y = e.clientY - r.top;
-    pointer.target = 1;
+    pointerX = e.clientX - r.left;
+    pointerY = e.clientY - r.top;
+    pointerActive = true;
   }, { passive: true });
 
   stage.addEventListener("pointerleave", () => {
-    pointer.target = 0;
+    pointerActive = false;
   });
 
-  addEventListener("scroll", () => {
-    scrollShift = Math.min(
-      1, scrollY / Math.max(innerHeight, 1)
-    );
-  }, { passive: true });
+  document.addEventListener("visibilitychange", () => {
+    play(!document.hidden);
+  });
 
   if ("ResizeObserver" in window) {
     new ResizeObserver(resize).observe(stage);
   } else {
-    addEventListener("resize", resize, { passive: true });
+    window.addEventListener("resize", resize, {
+      passive: true
+    });
   }
 
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(entries => {
       play(entries[0].isIntersecting);
     }, { threshold: .02 }).observe(stage);
-
-    if (!reduced) {
-      const obs = new IntersectionObserver(entries => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            e.target.classList.add("eden-visible");
-            obs.unobserve(e.target);
-          }
-        }
-      }, { threshold: .1 });
-
-      document.querySelectorAll(".eden-tech-card")
-        .forEach((el, i) => {
-          el.classList.add("eden-entering");
-          el.style.transitionDelay = `${(i % 4) * 85}ms`;
-          obs.observe(el);
-        });
-    }
   } else {
     play(true);
   }
 
-  document.addEventListener("visibilitychange", () => {
-    play(!document.hidden);
-  });
-
   resize();
+
+  // Aparicao dos elementos durante a rolagem.
+  if (!reduced && "IntersectionObserver" in window) {
+    const selector = [
+      ".eden-tech-header",
+      ".eden-tech-intro > div",
+      ".eden-tech-card",
+      ".eden-tech-footer",
+      ".method-step",
+      ".maturity-copy",
+      ".last-content",
+      ".experience-selector"
+    ].join(",");
+
+    const observer = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+
+        e.target.classList.add("eden-scroll-visible");
+        observer.unobserve(e.target);
+      }
+    }, {
+      threshold: .08,
+      rootMargin: "0px 0px -24px 0px"
+    });
+
+    document.querySelectorAll(selector).forEach((el, i) => {
+      if (el.getBoundingClientRect().top > innerHeight * .83) {
+        el.classList.add("eden-scroll-entry");
+        el.style.setProperty(
+          "--eden-scroll-delay",
+          `${(i % 4) * 85}ms`
+        );
+
+        observer.observe(el);
+      }
+    });
+  }
 })();

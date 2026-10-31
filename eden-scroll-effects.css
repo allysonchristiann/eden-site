@@ -1,0 +1,37 @@
+/* EDEN - Entradas animadas durante a rolagem */
+
+@media (prefers-reduced-motion: no-preference) {
+  .eden-scroll-entry {
+    opacity: 0;
+    transform: translateY(48px);
+    transition:
+      opacity .95s cubic-bezier(.16,1,.3,1),
+      transform 1.1s cubic-bezier(.16,1,.3,1);
+    transition-delay: var(--eden-scroll-delay, 0ms);
+    will-change: opacity, transform;
+  }
+
+  .eden-scroll-entry.eden-scroll-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 1021px) {
+  .hero-stage {
+    min-height: 650px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-stage {
+    min-height: 350px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eden-scroll-entry {
+    opacity: 1;
+    transform: none;
+  }
+}
