@@ -158,18 +158,17 @@
     return bounds;
   }
   for (const scene of Object.values(scenes)) scene.bounds = actorBounds(scene);
-  function fitActor(a, b, progress, mobile) {
-    const from = a.bounds || b.bounds, to = b.bounds || a.bounds;
-    if (!from || !to) return;
-    const left = mix(from.left, to.left, progress), right = mix(from.right, to.right, progress);
-    const top = mix(from.top, to.top, progress), bottom = mix(from.bottom, to.bottom, progress);
-    const side = mobile ? 22 : 34;
-    const maxWidth = Math.min((params.cx - side) / Math.max(.01, -left), (width - side - params.cx) / Math.max(.01, right));
-    const safeTop = headerHeight + 28, safeBottom = height - 32;
-    params.scale = Math.min(params.scale, maxWidth, (safeBottom - safeTop) / Math.max(.1, top - bottom));
-    if (!mobile) params.cy = clamp(params.cy, safeTop + top * params.scale, safeBottom + bottom * params.scale);
+  function fitActor(scene, art) {
+    if (!art || !scene.bounds) return;
+    const bounds = scene.bounds;
+    const padding = width <= 760 ? 8 : 14;
+    params.scale = Math.min((art.width - padding * 2) / (bounds.right - bounds.left),
+      (art.height - padding * 2) / (bounds.top - bounds.bottom));
+    // Fit once inside the document slot; never clamp to viewport edges while scrolling.
+    params.cx = art.x - (bounds.left + bounds.right) * .5 * params.scale;
+    params.cy = art.y + (bounds.top + bounds.bottom) * .5 * params.scale;
   }
-  let width = 1, height = 1, dpr = 1, stops = [], frame = 0, last = 0, shapePair = '';
+  let width = 1, height = 1, dpr = 1, frame = 0, last = 0, shapePair = '';
   let renderer = null, atmosphere = null, isWebGL = false, contextLost = false, layoutFrame = 0;
   let quality = 1, slowTime = 0, lastQualityChange = 0, frameInterval = 16.67;
   let pointerX = 0, pointerY = 0, targetX = 0, targetY = 0, pointerOn = false, pointerStrength = 0;
@@ -177,25 +176,20 @@
   const params = { a: scenes['bulb-right'], b: scenes['bulb-right'], t: 0, cx: 0, cy: 0, scale: 1, rotationX: 0, rotationY: 0, rotationZ: 0, opacity: 1, density: 1, flow: 0, transition: 0, pose: 0, scroll: 0, time: 0, logo: 0, growth: 0, buildLogo: 0, buildGrowth: 0, actorOpacity: 1, drawCount: count };
   let artReady = false, activeScene = '', logoState = '';
   function sceneAt(scroll) {
-    let i = 0;
-    // The same reading boundary drives the copy. Scroll is the only assembly clock:
-    // reversing or stopping the document immediately reverses or stops the morph.
-    while (i < stops.length - 1 && scroll >= stops[i + 1].boundary) i++;
-    const current = stops[i], next = stops[i + 1];
-    const entering = i === 0 ? 1 : clamp((scroll - current.boundary) / (height * .18));
-    const leaving = next ? 1 - clamp((scroll - (next.boundary - height * .16)) / (height * .14)) : 1;
-    params.a = scenes.ambient; params.b = scenes[current.name];
-    params.t = Math.min(entering, leaving); params.pose = 1;
-    params.transition = ['scatter', 'ambient'].includes(params.b.shape) ? 0 : 1;
-    params.flow = params.transition * Math.sin(params.t * Math.PI);
-    params.buildLogo = params.b.shape === 'logo' ? 1 : 0;
-    const name = current.name;
-    if (activeScene !== name) { activeScene = name; canvas.dataset.scene = name; }
-    const assemblyState = params.buildLogo && params.t >= 1 ? 'formed' : params.buildLogo && params.t > 0 ? 'forming' : 'idle';
+    const state = window.edenStoryScroll?.sync(scroll);
+    if (!state) return null;
+    const scene = scenes[state.scene];
+    // Artwork is already a coherent illustration when its copy begins to show.
+    // Its fade and document-space movement come directly from the composition.
+    params.a = params.b = scene; params.t = 0; params.pose = 0;
+    params.transition = params.flow = params.buildLogo = params.buildGrowth = 0;
+    if (activeScene !== state.scene) { activeScene = state.scene; canvas.dataset.scene = state.scene; }
+    const assemblyState = scene.shape === 'logo' && state.opacity > .999 ? 'formed'
+      : scene.shape === 'logo' && state.opacity > 0 ? 'forming' : 'idle';
     if (assemblyState !== logoState) { logoState = assemblyState; canvas.dataset.logo = assemblyState; }
-    const progressLabel = params.t.toFixed(3);
-    if (canvas.dataset.progress !== progressLabel) canvas.dataset.progress = progressLabel;
-    return i;
+    const label = state.opacity.toFixed(4);
+    if (canvas.dataset.progress !== label) canvas.dataset.progress = label;
+    return state;
   }
   const vertex = `
     precision highp float;
@@ -253,7 +247,7 @@
         vAlpha = clamp(.72 + p.z * .32, .14, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
         vAlpha = mix(vAlpha, uOpacity * presence * .96, uLogo);
         vAlpha = min(1., vAlpha * (1. + focus * .22));
-        vAlpha *= smoothstep(uHeader * .35, uHeader + 20., pixel.y);
+        vAlpha *= mix(1., smoothstep(uHeader * .35, uHeader + 20., pixel.y), uField);
         if (presence < .001) { gl_Position = vec4(3., 3., 0., 1.); gl_PointSize = 1.; }
       }
       float angle = aData.z + uTime * (.085 + aData.x * .085);
@@ -544,13 +538,6 @@
     canvas.dataset.renderer = isWebGL ? 'webgl' : 'canvas';
     resize(); restart();
   }
-  function measureStops() {
-    stops = sections.map(section => {
-      const panel = section.querySelector('.story-panel');
-      const top = section.getBoundingClientRect().top + scrollY;
-      return { name: section.dataset.scene, at: top, boundary: Math.max(0, top - height * .52), panelTop: panel ? panel.getBoundingClientRect().top + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0, panelBottom: panel ? panel.getBoundingClientRect().bottom + scrollY - (parseFloat(panel.style.getPropertyValue('--story-y')) || 0) : 0 };
-    });
-  }
   function setResolution() {
     // Bound fullscreen fill-rate, especially on Retina and 4K displays.
     dpr = Math.min(devicePixelRatio || 1, 1.35, Math.sqrt(2000000 / Math.max(1, width * height))) * Math.sqrt(quality);
@@ -558,27 +545,18 @@
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
   }
   function resize() {
-    width = innerWidth; height = innerHeight; headerHeight = document.querySelector('.site-header')?.offsetHeight || (width <= 760 ? 72 : 88); setResolution(); measureStops(); draw(performance.now(), 16.67);
+    width = innerWidth; height = innerHeight; headerHeight = document.querySelector('.site-header')?.offsetHeight || (width <= 760 ? 72 : 88); setResolution(); draw(performance.now(), 16.67);
   }
   function queueLayout() {
     if (layoutFrame) return;
     layoutFrame = requestAnimationFrame(() => { layoutFrame = 0; resize(); });
   }
   function draw(now, delta) {
-    if (!renderer || contextLost || !stops.length) return;
-    const elapsed = Math.min(delta, 50);
-    const scroll = scrollY, i = sceneAt(scroll);
-    const a = params.a, b = params.b, t = params.t, pose = params.pose;
-    const mobile = width <= 760;
-    params.time = reduced.matches ? 0 : timelineTime; params.scroll = scroll;
-    params.cx = mobile ? width * .5 : width * mix(a.x, b.x, pose);
-    params.cy = height * mix(a.y, b.y, pose);
-    params.scale = (mobile ? Math.min(width * .39, height * .23) : Math.min(width * .275, height * .445)) * mix(a.size, b.size, pose);
-    if (mobile) {
-      const current = stops[i];
-      const offset = 45 + params.scale * 1.15;
-      params.cy = b.shape === 'scatter' || b.shape === 'ambient' ? height * .52 : current.panelBottom - scroll + offset;
-    }
+    if (!renderer || contextLost) return;
+    const state = sceneAt(scrollY);
+    if (!state) return;
+    const elapsed = Math.min(delta, 50), scene = params.b;
+    params.time = reduced.matches ? 0 : timelineTime; params.scroll = scrollY;
     if (reduced.matches) { cameraX = 0; cameraY = 0; pointerStrength = 0; }
     const follow = 1 - Math.exp(-elapsed / 85);
     const targetCameraX = pointerOn && !reduced.matches ? targetX / width * 2 - 1 : 0;
@@ -586,19 +564,16 @@
     cameraX += (targetCameraX - cameraX) * follow; cameraY += (targetCameraY - cameraY) * follow;
     pointerX += (targetX - pointerX) * follow; pointerY += (targetY - pointerY) * follow;
     pointerStrength += ((pointerOn && !reduced.matches ? 1 : 0) - pointerStrength) * follow;
-    params.cx += cameraX * (mobile ? 0 : 6); params.cy -= cameraY * (mobile ? 0 : 4);
-    params.logo = mix(a.shape === 'logo' ? 1 : 0, b.shape === 'logo' ? 1 : 0, t);
-    params.buildGrowth = b.shape === 'growth' ? 1 : 0;
-    params.growth = mix(a.shape === 'growth' ? 1 : 0, b.shape === 'growth' ? 1 : 0, t);
-    params.rotationX = cameraY * .035 * (1 - params.logo * .85);
-    params.rotationY = mix(a.ry, b.ry, pose) + cameraX * .06 * (1 - params.logo * .85) + (reduced.matches ? 0 : Math.sin(params.time * .17) * .075 * (1 - params.logo));
-    params.rotationZ = mix(a.rz, b.rz, pose);
-    fitActor(a, b, pose, mobile);
-    params.opacity = mix(a.opacity, b.opacity, t);
-    params.drawCount = Math.max(1, Math.floor(count * quality));
-    params.density = mix(a.density, b.density, t);
-    const aField = a.shape === 'scatter' || a.shape === 'ambient', bField = b.shape === 'scatter' || b.shape === 'ambient';
-    params.actorOpacity = aField && bField ? 0 : aField ? t : bField ? 1 - t : 1;
+    params.logo = scene.shape === 'logo' ? 1 : 0;
+    params.growth = scene.shape === 'growth' ? 1 : 0;
+    params.rotationX = cameraY * .025 * (1 - params.logo * .85);
+    params.rotationY = scene.ry + cameraX * .035 * (1 - params.logo * .85);
+    params.rotationZ = scene.rz;
+    params.cx = width * .5; params.cy = height * .5;
+    params.scale = 1; fitActor(scene, state.art);
+    params.opacity = state.opacity;
+    params.drawCount = Math.max(1, Math.floor(count * quality)); params.density = 1;
+    params.actorOpacity = state.art && !['scatter', 'ambient'].includes(scene.shape) ? 1 : 0;
     renderer();
     if (!artReady) { artReady = true; document.documentElement.dataset.artReady = 'true'; }
   }
@@ -627,6 +602,7 @@
   addEventListener('scroll', () => { if (reduced.matches) draw(performance.now(), 16.67); }, { passive: true });
   addEventListener('resize', queueLayout, { passive: true });
   document.addEventListener('visibilitychange', restart); reduced.addEventListener('change', restart);
+  document.addEventListener('eden:storylayout', () => { if (reduced.matches) draw(performance.now(), 16.67); });
   bindContextEvents(); init();
   if ('ResizeObserver' in window) { const layout = new ResizeObserver(queueLayout); sections.forEach(section => layout.observe(section)); }
 })();

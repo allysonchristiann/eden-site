@@ -17,110 +17,89 @@
   document.addEventListener('click', event => { if (!header.contains(event.target)) setMenu(false); });
   matchMedia('(min-width: 761px)').addEventListener('change', () => setMenu(false));
   $('#currentYear').textContent = new Date().getFullYear();
-  // Each chapter enters and leaves at an exact scroll position. The small
-  // empty interval between chapters keeps two unrelated messages offscreen
-  // together, and reversing scroll reverses every reveal without a timer.
+  // One document box and one scroll state own both the copy and its artwork.
+  // The renderer consumes sync(), rather than maintaining a second timeline.
   const chapters = $$('.story-section');
-  const motionGroups = $$('.story-panel, .service-carousel');
   const limit = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value));
   const ease = value => value * value * (3 - 2 * value);
-  let chapterBounds = [], groupBounds = [], panelFrame = 0, panelLayoutFrame = 0;
-  let viewport = innerHeight;
-  function resetPanels() {
-    document.documentElement.classList.remove('story-scroll-ready');
-    motionGroups.forEach(group => {
-      group.classList.remove('story-drift');
-      group.inert = false;
-      group.removeAttribute('aria-hidden');
-      group.style.removeProperty('--story-opacity');
-      group.querySelectorAll('.story-beat').forEach(beat => {
-        beat.classList.remove('story-beat');
-        beat.style.removeProperty('--beat-y');
-        beat.style.removeProperty('--beat-opacity');
-      });
-    });
-  }
-  function chapterGate(index, scroll) {
-    const incoming = index === 0 ? 1 : ease(limit((scroll - chapterBounds[index].boundary - viewport * .02) / (viewport * .14)));
-    const next = chapterBounds[index + 1];
-    const outgoing = next ? 1 - ease(limit((scroll - next.boundary + viewport * .14) / (viewport * .12))) : 1;
-    return Math.min(incoming, outgoing);
-  }
-  function readStory(scroll = scrollY) {
-    let index = 0;
-    while (index < chapterBounds.length - 1 && scroll >= chapterBounds[index + 1].boundary) index++;
-    const current = chapterBounds[index], next = chapterBounds[index + 1];
-    return {
-      index,
-      section: current?.section || chapters[0],
-      scene: current?.section.dataset.scene || 'bulb-right',
-      boundary: current?.boundary || 0,
-      nextBoundary: next?.boundary ?? Infinity,
-      sceneProgress: current ? limit((scroll - current.boundary) / Math.max(1, (next?.boundary ?? current.bottom) - current.boundary)) : 0,
-      gate: current ? chapterGate(index, scroll) : 1
+  let chapterBounds = [], panelFrame = 0, panelLayoutFrame = 0, viewport = innerHeight;
+  let lastScroll = NaN;
+  function stateFor(index, scroll) {
+    const item = chapterBounds[index], next = chapterBounds[index + 1];
+    const entering = index === 0 ? 1 : ease(limit((scroll - item.boundary) / (viewport * .20)));
+    const leaving = next ? 1 - ease(limit((scroll - next.boundary + viewport * .12) / (viewport * .12))) : 1;
+    const opacity = reduced.matches ? 1 : Math.min(entering, leaving);
+    const offsetY = reduced.matches ? 0 : (1 - entering) * 24 - (1 - leaving) * 24;
+    return { index, section: item.section, scene: item.section.dataset.scene,
+      boundary: item.boundary, nextBoundary: next?.boundary ?? Infinity,
+      gate: opacity, opacity, offsetY,
+      art: item.art ? { x: item.art.x, y: item.art.y - scroll + offsetY,
+        width: item.art.width, height: item.art.height } : null,
+      composition: { top: item.top - scroll + offsetY, bottom: item.bottom - scroll + offsetY }
     };
   }
-  window.edenStoryScroll = Object.freeze({ read: readStory });
+  function readStory(scroll = scrollY) {
+    if (!chapterBounds.length) return null;
+    let index = 0;
+    while (index < chapterBounds.length - 1 && scroll >= chapterBounds[index + 1].boundary) index++;
+    return stateFor(index, scroll);
+  }
+  function syncStory(scroll = scrollY) {
+    if (scroll !== lastScroll && !reduced.matches) {
+      for (let i = 0; i < chapterBounds.length; i++) {
+        const item = chapterBounds[i], state = stateFor(i, scroll);
+        const opacity = state.opacity.toFixed(4), y = state.offsetY.toFixed(3) + 'px';
+        if (opacity !== item.opacity) {
+          item.group.style.setProperty('--composition-opacity', opacity);
+          item.opacity = opacity;
+        }
+        if (y !== item.y) {
+          item.group.style.setProperty('--composition-y', y);
+          item.y = y;
+        }
+        const hidden = state.opacity < .0001;
+        if (hidden !== item.hidden) {
+          item.group.inert = hidden;
+          if (hidden) item.group.setAttribute('aria-hidden', 'true');
+          else item.group.removeAttribute('aria-hidden');
+          item.group.dataset.reading = hidden ? 'offstage' : 'onstage';
+          item.hidden = hidden;
+        }
+      }
+      lastScroll = scroll;
+    }
+    return readStory(scroll);
+  }
+  window.edenStoryScroll = Object.freeze({ read: readStory, sync: syncStory });
   function updatePanels() {
     panelFrame = 0;
-    if (reduced.matches || document.hidden) return;
-    const scroll = scrollY;
-    for (const item of groupBounds) {
-      const gate = chapterGate(item.index, scroll);
-      const offstage = gate < .002;
-      if (offstage !== item.hidden) {
-        item.group.inert = offstage;
-        if (offstage) item.group.setAttribute('aria-hidden', 'true');
-        else item.group.removeAttribute('aria-hidden');
-        item.group.dataset.reading = offstage ? 'offstage' : 'onstage';
-        item.hidden = offstage;
-      }
-      const opacity = gate.toFixed(3);
-      if (opacity !== item.opacity) {
-        item.group.style.setProperty('--story-opacity', opacity);
-        item.opacity = opacity;
-      }
-      for (const beat of item.beats) {
-        // Start each line as it reaches the lower reading zone. Its final
-        // position is always its natural place in the page, never a sticky layer.
-        const entering = item.index === 0 ? 1 : ease(limit((viewport * .88 - (beat.top - scroll)) / (viewport * .22)));
-        const beatOpacity = entering.toFixed(3);
-        const y = ((1 - entering) * 24).toFixed(2);
-        if (beatOpacity !== beat.opacity) {
-          beat.node.style.setProperty('--beat-opacity', beatOpacity);
-          beat.opacity = beatOpacity;
-        }
-        if (y !== beat.y) {
-          beat.node.style.setProperty('--beat-y', y + 'px');
-          beat.y = y;
-        }
-      }
-    }
+    if (!document.hidden) syncStory();
   }
   function queuePanels() {
-    if (!panelFrame && !reduced.matches && !document.hidden) panelFrame = requestAnimationFrame(updatePanels);
+    if (!panelFrame && !document.hidden) panelFrame = requestAnimationFrame(updatePanels);
   }
   function measurePanels() {
     panelLayoutFrame = 0;
     cancelAnimationFrame(panelFrame); panelFrame = 0;
-    resetPanels();
+    const groups = chapters.map(section => section.querySelector('.story-composition'));
+    groups.forEach(group => {
+      group.classList.remove('is-choreographed');
+      group.inert = false; group.removeAttribute('aria-hidden');
+    });
     viewport = innerHeight;
     chapterBounds = chapters.map((section, index) => {
-      const rect = section.getBoundingClientRect();
+      const group = groups[index], rect = group.getBoundingClientRect();
+      const slot = group.querySelector('[data-art-slot]')?.getBoundingClientRect();
       const top = rect.top + scrollY;
-      return { section, top, bottom: top + rect.height, boundary: index === 0 ? 0 : top - viewport * .52 };
+      return { section, group, top, bottom: top + rect.height,
+        boundary: index === 0 ? 0 : top - viewport * .66,
+        art: slot ? { x: slot.left + slot.width / 2, y: slot.top + scrollY + slot.height / 2,
+          width: slot.width, height: slot.height } : null,
+        opacity: null, y: null, hidden: null };
     });
-    if (reduced.matches) { groupBounds = []; return; }
-    groupBounds = motionGroups.map(group => {
-      const index = chapters.indexOf(group.closest('.story-section'));
-      const nodes = [...group.children].filter(node => !node.hidden);
-      const beats = nodes.map(node => ({ node, top: node.getBoundingClientRect().top + scrollY, opacity: null, y: null }));
-      group.classList.add('story-drift');
-      beats.forEach(beat => beat.node.classList.add('story-beat'));
-      return { group, index, beats, opacity: null, hidden: null };
-    });
-    document.documentElement.classList.add('story-scroll-ready');
-    updatePanels();
+    if (!reduced.matches) groups.forEach(group => group.classList.add('is-choreographed'));
+    lastScroll = NaN; syncStory();
+    document.dispatchEvent(new Event('eden:storylayout'));
   }
   function queuePanelLayout() {
     if (!panelLayoutFrame) panelLayoutFrame = requestAnimationFrame(measurePanels);
@@ -130,8 +109,8 @@
   document.addEventListener('visibilitychange', queuePanels);
   reduced.addEventListener('change', queuePanelLayout);
   if ('ResizeObserver' in window) {
-    const panelLayout = new ResizeObserver(queuePanelLayout);
-    chapters.forEach(section => panelLayout.observe(section));
+    const layout = new ResizeObserver(queuePanelLayout);
+    chapters.forEach(section => layout.observe(section));
   }
   measurePanels();
 

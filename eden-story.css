@@ -202,3 +202,49 @@ h2 { font-size: clamp(60px, 5.5vw, 100px); line-height: 1.02; font-weight: 400; 
 .art-unavailable .growth-fallback { display: block; width: min(44vw, 600px); height: auto; order: -1; }
 .art-unavailable #metodo { justify-content: space-between; gap: 40px; }
 @media (max-width: 760px) { .art-unavailable .growth-fallback { width: 100%; margin: 45px auto 0; } }
+
+/* A chapter is one composition: copy and artwork occupy the same document
+   box and receive the same scroll transform and opacity. */
+.story-section { min-height: 100svh; padding: 140px max(8.3vw, calc((100vw - 1600px) / 2)) 100px; align-items: center; }
+.story-composition { position: relative; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 7vw; align-items: center; }
+.story-composition > .story-panel { width: 100%; max-width: none; margin: 0; }
+.story-art { position: relative; width: 100%; height: clamp(440px, 65svh, 620px); min-width: 0; }
+.story-art .art-fallback { display: block; width: 100%; height: 100%; object-fit: contain; opacity: .75; }
+html[data-art-ready="true"] .story-art .art-fallback { visibility: hidden; }
+#metodo .story-composition { grid-template-columns: minmax(0, 1.3fr) minmax(0, .85fr); gap: 9vw; }
+#metodo .story-art { grid-row: 1; grid-column: 1; height: clamp(330px, 48svh, 460px); }
+#metodo .story-panel { grid-column: 2; grid-row: 1; }
+#conversar .story-art { height: clamp(360px, 54svh, 500px); }
+.story-center .story-composition { display: block; }
+.story-center .story-panel { max-width: 1120px; margin: auto; }
+.solutions-section { gap: 0; }
+.solutions-section .story-composition { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10vw; }
+.solutions-section .service-carousel { width: 100%; max-width: none; margin: 0; }
+.story-composition.is-choreographed { opacity: var(--composition-opacity, 1); transform: translate3d(0, var(--composition-y, 0px), 0); }
+.story-composition[inert] { pointer-events: none; }
+.art-unavailable #metodo, .art-unavailable .final-section { display: flex; }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .story-section { padding-left: 6vw; padding-right: 6vw; }
+  .story-composition, #metodo .story-composition { gap: 5vw; }
+}
+@media (max-width: 760px) {
+  .story-section, .hero, .story-chaos, .final-section { display: block; min-height: 0; padding: 112px 24px 84px; }
+  .story-composition, #metodo .story-composition, .solutions-section .story-composition { display: flex; flex-direction: column; gap: 0; align-items: stretch; }
+  #inicio .story-panel, #metodo .story-panel, #conversar .story-panel { display: contents; }
+  #inicio .story-panel > *, #metodo .story-panel > *, #conversar .story-panel > * { order: 3; }
+  #inicio .story-panel > .eyebrow, #metodo .story-panel > .eyebrow, #conversar .story-panel > .eyebrow { order: 0; }
+  #inicio .story-panel > h1, #metodo .story-panel > h2, #conversar .story-panel > h2 { order: 1; }
+  .story-composition > .story-art, #metodo .story-art, #conversar .story-art { order: 2; height: 240px; margin: 0 0 28px; }
+  #inicio .story-art { height: 270px; }
+  #metodo .story-art { height: 220px; }
+  #inicio h1 { font-size: clamp(66px, 16vw, 100px); }
+  #metodo h2 { font-size: clamp(48px, 11.8vw, 76px); }
+  #conversar h2 { font-size: clamp(56px, 13.6vw, 90px); }
+  .story-panel .button, .story-panel .text-link { align-self: flex-start; }
+  .solutions-section .service-carousel { margin-top: 46px; }
+  .story-center .story-composition { display: block; }
+  .scroll-cue { bottom: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-composition.is-choreographed { opacity: 1; transform: none; }
+}
