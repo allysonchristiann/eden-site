@@ -126,28 +126,35 @@
   // Manual carousel: no autoplay, all eight services stay accessible without JavaScript.
   const carousel = $('.service-carousel');
   const cards = $$('.service-card', carousel);
+  const controls = $('.carousel-controls', carousel);
+  // Keep navigation directly after each service's own text. Empty slots in
+  // the other cards reserve the same space, so the chapter never jumps.
+  const navigationSlots = cards.map(card => {
+    const slot = document.createElement('div');
+    slot.className = 'service-navigation-slot';
+    card.append(slot);
+    return slot;
+  });
   $('#serviceDeck').classList.add('is-enhanced');
   let currentService = 0;
   function showService(index) {
+    const focusedControl = controls.contains(document.activeElement) ? document.activeElement : null;
     currentService = (index + cards.length) % cards.length;
+    navigationSlots[currentService].append(controls);
     cards.forEach((card, i) => {
       card.hidden = i !== currentService;
       card.classList.toggle('is-active', i === currentService);
-      card.classList.remove('is-changing');
     });
-    if (!reduced.matches) {
-      void cards[currentService].offsetWidth;
-      cards[currentService].classList.add('is-changing');
-    }
     $('#serviceCounter').textContent = `${String(currentService + 1).padStart(2, '0')} / ${String(cards.length).padStart(2, '0')}`;
+    if (focusedControl) focusedControl.focus({ preventScroll: true });
   }
-  $('.carousel-controls').hidden = false;
+  controls.hidden = false;
   $('#servicePrevious').addEventListener('click', () => showService(currentService - 1));
   $('#serviceNext').addEventListener('click', () => showService(currentService + 1));
   carousel.addEventListener('keydown', event => {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();
-      const focusWasInsideCard = cards[currentService].contains(document.activeElement);
+      const focusWasInsideCard = cards[currentService].contains(document.activeElement) && !controls.contains(document.activeElement);
       showService(currentService + (event.key === 'ArrowRight' ? 1 : -1));
       if (focusWasInsideCard) $('.service-contact', cards[currentService]).focus();
     }

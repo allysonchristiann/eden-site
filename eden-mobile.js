@@ -115,8 +115,7 @@
     paintBackdrop();
     const models = [
       ['inicio', async () => bulbPoints()],
-      ['metodo', async () => maskPoints(await sampleImage('eden-growth.svg', 360, 252), 1400, true)],
-      ['conversar', async () => maskPoints(await sampleImage('eden-logo.svg', 256, 256), 2000, false)]
+      ['metodo', async () => maskPoints(await sampleImage('eden-growth.svg', 360, 252), 1400, true)]
     ];
     await Promise.all(models.map(async ([id, create]) => {
       const slot = document.querySelector(`#${id} [data-art-slot]`);
@@ -131,6 +130,14 @@
         const entry = { slot, points, bounds }; entries.push(entry); paintArtwork(entry);
       } catch (_) { /* The illustration in this slot remains visible as its fallback. */ }
     }));
+    // The brand has fine lettering: retain its native vector geometry on
+    // mobile instead of sampling it into an enlarged low-resolution texture.
+    // Its parent still supplies the shared scroll entrance and exit.
+    const logo = document.querySelector('#conversar [data-art-slot]');
+    if (logo) {
+      logo.classList.add('mobile-logo-vector');
+      logo.setAttribute('data-mobile-art-ready', '');
+    }
     root.dataset.artReady = 'true';
   }
   addEventListener('resize', () => {
