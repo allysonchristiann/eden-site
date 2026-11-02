@@ -4,13 +4,15 @@
   let canvas = document.getElementById('edenParticles');
   const sections = [...document.querySelectorAll('.story-section[data-scene]')];
   if (!canvas || !sections.length) return;
-  // Touch layouts use cached canvases inside their text composition. Native
-  // scrolling moves those textures without running a fullscreen GPU loop.
-  if (window.edenMobileMotion?.enabled) return;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const compact = matchMedia('(max-width: 760px)').matches;
-  const count = compact ? 2200 : 6400;
-  const ambientCount = compact ? 22 : 54;
+  const smallScreen = matchMedia('(max-width: 760px)');
+  const coarsePointer = matchMedia('(pointer: coarse)');
+  const isCompact = () => smallScreen.matches || (coarsePointer.matches && innerWidth <= 1100);
+  let compact = isCompact();
+  // Retain the desktop models and buffers across orientation changes. Mobile
+  // draws a smaller prefix of those same models rather than another artwork.
+  const count = 6400;
+  const ambientCount = 54;
   const total = count + ambientCount;
   const tau = Math.PI * 2;
   const clamp = (n, a = 0, b = 1) => Math.min(b, Math.max(a, n));
@@ -137,7 +139,7 @@
   }
   for (let i = 0; i < total; i++) {
     const p = points[i];
-    data.set([p.w, i < count ? (compact ? 6.5 + p.s * 4.5 : 11 + p.s * 7) : (compact ? 8 + p.s * 16 : 12 + p.s * 26), p.u * tau, i >= count ? 1 : 0], i * 4);
+    data.set([p.w, i < count ? 11 + p.s * 7 : 12 + p.s * 26, p.u * tau, i >= count ? 1 : 0], i * 4);
   }
   const scenes = {
     'bulb-right': { shape: 'bulb', x: .74, y: .51, size: .8, ry: -.08, rz: .34, opacity: 1, density: 1 },
@@ -164,7 +166,7 @@
   function fitActor(scene, art) {
     if (!art || !scene.bounds) return;
     const bounds = scene.bounds;
-    const padding = width <= 760 ? 8 : 14;
+    const padding = compact ? 8 : 14;
     params.scale = Math.min((art.width - padding * 2) / (bounds.right - bounds.left),
       (art.height - padding * 2) / (bounds.top - bounds.bottom));
     // Fit once inside the document slot; never clamp to viewport edges while scrolling.
@@ -201,7 +203,7 @@
     uniform vec2 uViewport, uCenter, uPointer;
     uniform vec4 uRotation;
     uniform vec2 uTilt;
-    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField, uLogo, uGrowth, uBuildLogo, uBuildGrowth, uHeader;
+    uniform float uMix, uTime, uScale, uDpr, uOpacity, uDensity, uFlow, uTransition, uPointerStrength, uField, uLogo, uGrowth, uBuildLogo, uBuildGrowth, uHeader, uCompact;
     varying vec3 vColor;
     varying vec2 vSpin, vTilt;
     varying float vAlpha, vStroke;
@@ -222,10 +224,11 @@
       float drift = (.009 + uFlow * .055) * mix(1., .2, uLogo);
       p += vec3(sin(p.y * 3. + uTime * .38 + aData.z), cos(p.x * 3. + uTime * .31 + aData.z), sin(uTime * .27 + aData.z)) * drift;
       float focus = 0.;
+      float pointSize = mix(aData.y, 6.5 + (aData.y - 11.) * (4.5 / 7.), uCompact);
       if (aData.w > .5) {
         p.xy += vec2(sin(uTime * .18 + aData.z), cos(uTime * .13 + aData.z)) * .025;
         gl_Position = vec4(p.x, p.y, 0., 1.);
-        gl_PointSize = aData.y * uDpr;
+        gl_PointSize = mix(aData.y, 8. + (aData.y - 12.) * (16. / 26.), uCompact) * uDpr;
         vAlpha = .1 + aData.x * .22;
       } else {
         p.yz = mat2(uTilt.x, -uTilt.y, uTilt.y, uTilt.x) * p.yz;
@@ -245,7 +248,7 @@
         gl_Position = vec4(clip.x, -clip.y, 0., 1.);
         float magnify = focus * (.65 + 1.35 * aData.x);
         float depthSize = clamp(.7 + p.z * .20, .32, 1.35);
-        gl_PointSize = aData.y * uDpr * perspective * mix(1., depthSize, uField) * mix(1., .64, max(uLogo, uGrowth)) * (1. + magnify);
+        gl_PointSize = pointSize * uDpr * perspective * mix(1., depthSize, uField) * mix(1., .64, max(uLogo, uGrowth)) * (1. + magnify);
         float presence = 1. - smoothstep(uDensity - .06, uDensity + .06, aData.x);
         vAlpha = clamp(.72 + p.z * .32, .14, 1.) * uOpacity * presence * mix(1., clamp(.55 + p.z * .26, .12, 1.), uField);
         vAlpha = mix(vAlpha, uOpacity * presence * .96, uLogo);
@@ -288,7 +291,7 @@
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
     const uniforms = {};
-    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field', 'Logo', 'Growth', 'BuildLogo', 'BuildGrowth', 'Header']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
+    for (const name of ['Viewport', 'Center', 'Pointer', 'Mix', 'Time', 'Scale', 'Dpr', 'Rotation', 'Tilt', 'Opacity', 'Density', 'Flow', 'Transition', 'PointerStrength', 'Field', 'Logo', 'Growth', 'BuildLogo', 'BuildGrowth', 'Header', 'Compact']) uniforms[name] = gl.getUniformLocation(program, 'u' + name);
     const locations = {}, buffers = {};
     for (const name of ['From', 'To', 'ColorFrom', 'ColorTo', 'Data']) {
       locations[name] = gl.getAttribLocation(program, 'a' + name); gl.enableVertexAttribArray(locations[name]);
@@ -315,15 +318,16 @@
       gl.viewport(0, 0, canvas.width, canvas.height); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform2f(uniforms.Viewport, width, height); gl.uniform2f(uniforms.Pointer, pointerX, pointerY);
       gl.uniform1f(uniforms.Time, params.time); gl.uniform1f(uniforms.Dpr, dpr); gl.uniform1f(uniforms.Header, headerHeight);
+      gl.uniform1f(uniforms.Compact, compact ? 1 : 0);
       // A separate, unchanging field remains visible behind every scene and the footer.
       bindShape('scatter', 'scatter');
       gl.uniform2f(uniforms.Center, width * .5 + cameraX * 8, height * .5 - cameraY * 6);
       gl.uniform4f(uniforms.Rotation, Math.cos(.1), Math.sin(.1), 1, 0); gl.uniform2f(uniforms.Tilt, 1, 0);
       gl.uniform1f(uniforms.Mix, 0); gl.uniform1f(uniforms.Scale, Math.min(width * .275, height * .445) * 1.2);
-      gl.uniform1f(uniforms.Opacity, .46); gl.uniform1f(uniforms.Density, .9);
+      gl.uniform1f(uniforms.Opacity, compact ? .30 : .46); gl.uniform1f(uniforms.Density, .9);
       gl.uniform1f(uniforms.Flow, 0); gl.uniform1f(uniforms.Transition, 0); gl.uniform1f(uniforms.Field, 1); gl.uniform1f(uniforms.Logo, 0); gl.uniform1f(uniforms.Growth, 0); gl.uniform1f(uniforms.BuildLogo, 0); gl.uniform1f(uniforms.BuildGrowth, 0);
       gl.uniform1f(uniforms.PointerStrength, pointerStrength * .45);
-      gl.drawArrays(gl.POINTS, 0, Math.floor(Math.min(count, compact ? 1000 : 3200) * quality));
+      gl.drawArrays(gl.POINTS, 0, Math.floor(Math.min(count, compact ? 450 : 3200) * quality));
       if (params.actorOpacity > .002) {
         bindShape(a.shape, b.shape);
         gl.uniform2f(uniforms.Center, params.cx, params.cy);
@@ -349,7 +353,7 @@
       for (const edge of edges) for (const endpoint of edge) {
         corners.push(...vertices[endpoint]);
         origins.push(p.u * 2.4 - 1.2, p.v * 2.4 - 1.2, p.w);
-        styles.push((compact ? 6 : 9) + p.s * (compact ? 13 : 22), .09 + p.w * .17, p.u * tau, .11 + p.s * .19);
+        styles.push(9 + p.s * 22, .09 + p.w * .17, p.u * tau, .11 + p.s * .19);
         ink.push(...c);
       }
     }
@@ -359,7 +363,7 @@
       attribute vec3 aCorner, aOrigin, aInk;
       attribute vec4 aStyle;
       uniform vec2 uViewport, uCamera;
-      uniform float uTime, uScroll, uHeader;
+      uniform float uTime, uScroll, uHeader, uCompact;
       varying vec3 vInk;
       varying float vAlpha;
       void main() {
@@ -377,7 +381,8 @@
         origin.y = mod(origin.y + uTime * (.003 + aOrigin.z * .006) - uScroll / uViewport.y * .035 * depth + 1.2, 2.4) - 1.2;
         vec2 floatOffset = vec2(sin(uTime * .12 + aStyle.z), cos(uTime * .15 + aStyle.z)) * (.018 + aOrigin.z * .023);
         origin += floatOffset + uCamera * (.012 + aOrigin.z * .033);
-        vec2 pixel = origin * uViewport * .5 + vec2(p.x, p.y) * aStyle.x * depth * perspective;
+        float size = mix(aStyle.x, 6. + (aStyle.x - 9.) * (13. / 22.), uCompact);
+        vec2 pixel = origin * uViewport * .5 + vec2(p.x, p.y) * size * depth * perspective;
         gl_Position = vec4(pixel / uViewport * 2., 0., 1.);
         vInk = aInk;
         vAlpha = aStyle.w * (.45 + aOrigin.z * .75) * smoothstep(uHeader * .35, uHeader + 20., uViewport.y * .5 - pixel.y);
@@ -398,17 +403,19 @@
     }
     const viewport = gl.getUniformLocation(program, 'uViewport'), camera = gl.getUniformLocation(program, 'uCamera');
     const time = gl.getUniformLocation(program, 'uTime'), scroll = gl.getUniformLocation(program, 'uScroll'), header = gl.getUniformLocation(program, 'uHeader');
+    const compactMode = gl.getUniformLocation(program, 'uCompact');
     return () => {
       gl.useProgram(program);
       for (const binding of bindings) { gl.bindBuffer(gl.ARRAY_BUFFER, binding.buffer); gl.vertexAttribPointer(binding.location, binding.size, gl.FLOAT, false, 0, 0); }
       gl.uniform2f(viewport, width, height); gl.uniform2f(camera, cameraX, cameraY);
       gl.uniform1f(time, params.time); gl.uniform1f(scroll, params.scroll); gl.uniform1f(header, headerHeight);
-      gl.drawArrays(gl.LINES, 0, ambientCount * 12);
+      gl.uniform1f(compactMode, compact ? 1 : 0);
+      gl.drawArrays(gl.LINES, 0, (compact ? 22 : ambientCount) * 12);
     };
   }
   function drawAtmosphere2D(ctx) {
     const time = params.time;
-    for (let i = 0; i < ambientCount; i++) {
+    for (let i = 0; i < (compact ? 22 : ambientCount); i++) {
       const p = points[count + i], c = palette[i % palette.length];
       const depth = .65 + p.w * .95, angle = time * (.09 + p.w * .17) + p.u * tau;
       const cx = Math.cos(angle * .73), sx = Math.sin(angle * .73), cy = Math.cos(angle), sy = Math.sin(angle), cz = Math.cos(angle * .47), sz = Math.sin(angle * .47);
@@ -440,7 +447,7 @@
     for (let i = 0; i < total; i++) for (let k = 0; k < 3; k++) { spinX[i * 3 + k] = Math.cos(data[i * 4 + 2] + k * tau / 3); spinY[i * 3 + k] = Math.sin(data[i * 4 + 2] + k * tau / 3); }
     function backdrop() {
       const xyz = positions.scatter, css = cssColors.scatter;
-      const stride = Math.ceil(count / (compact ? 350 : 750));
+      const stride = Math.ceil(count / (compact ? 200 : 750));
       const scale = Math.min(width * .275, height * .445) * 1.2;
       const ca = Math.cos(.1), sa = Math.sin(.1);
       for (let i = 0; i < count; i += stride) {
@@ -449,8 +456,9 @@
         const perspective = 4.5 / (4.5 - z), depthSize = clamp(.7 + z * .2, .32, 1.35);
         const px = width * .5 + cameraX * 8 + x * scale * perspective;
         const py = height * .5 - cameraY * 6 - y * scale * perspective;
-        const size = data[i * 4 + 1] * .38 * perspective * depthSize;
-        ctx.strokeStyle = css[i]; ctx.globalAlpha = clamp(.6 + z * .42, .1, 1) * .46 * clamp(.55 + z * .26, .12, 1);
+        const pointSize = compact ? 6.5 + (data[i * 4 + 1] - 11) * 4.5 / 7 : data[i * 4 + 1];
+        const size = pointSize * .38 * perspective * depthSize;
+        ctx.strokeStyle = css[i]; ctx.globalAlpha = clamp(.6 + z * .42, .1, 1) * (compact ? .30 : .46) * clamp(.55 + z * .26, .12, 1);
         ctx.beginPath();
         const angle = params.time * (.085 + p.w * .085), c = Math.cos(angle), s = Math.sin(angle);
         for (let k = 0; k < 3; k++) {
@@ -505,7 +513,8 @@
             px = cx + rotatedX * scale * perspective; py = cy - y * scale * perspective;
           }
         }
-        const size = data[i * 4 + 1] * (ambient ? .45 : .38 * perspective) * mix(1, .64, Math.max(params.logo, params.growth)) * (1 + focus * (.65 + 1.35 * p.w));
+        const pointSize = compact ? 6.5 + (data[i * 4 + 1] - 11) * 4.5 / 7 : data[i * 4 + 1];
+        const size = pointSize * (ambient ? .45 : .38 * perspective) * mix(1, .64, Math.max(params.logo, params.growth)) * (1 + focus * (.65 + 1.35 * p.w));
         const presence = 1 - smooth(clamp((p.w - params.density + .06) / .12));
         if (!ambient && presence < .001) continue;
         const cr0 = Math.round(mix(fromColor[index], toColor[index], q) * 255);
@@ -530,7 +539,7 @@
   }
   function init() {
     let gl = null;
-    try { gl = canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: 'high-performance', premultipliedAlpha: true, depth: false, stencil: false }); } catch (_) { /* Supported Canvas fallback below. */ }
+    try { gl = canvas.getContext('webgl', { alpha: true, antialias: false, powerPreference: compact ? 'low-power' : 'high-performance', premultipliedAlpha: true, depth: false, stencil: false }); } catch (_) { /* Supported Canvas fallback below. */ }
     renderer = null; atmosphere = null; isWebGL = false;
     if (gl) try { renderer = webglRenderer(gl); atmosphere = atmosphereRenderer(gl); isWebGL = true; } catch (error) { renderer = null; atmosphere = null; console.warn('EDEN: usando composição alternativa', error); }
     if (!renderer) {
@@ -543,11 +552,17 @@
   }
   function setResolution() {
     // Bound fullscreen fill-rate, especially on Retina and 4K displays.
-    dpr = Math.min(devicePixelRatio || 1, 1.35, Math.sqrt(2000000 / Math.max(1, width * height))) * Math.sqrt(quality);
+    dpr = Math.min(devicePixelRatio || 1, compact ? 1.25 : 1.35, Math.sqrt((compact ? 750000 : 2000000) / Math.max(1, width * height))) * Math.sqrt(quality);
     const pixelWidth = Math.max(1, Math.round(width * dpr)), pixelHeight = Math.max(1, Math.round(height * dpr));
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) { canvas.width = pixelWidth; canvas.height = pixelHeight; }
   }
   function resize() {
+    const nextCompact = isCompact();
+    if (nextCompact !== compact) {
+      compact = nextCompact; quality = 1; slowTime = 0; frameInterval = 16.67;
+      canvas.dataset.quality = quality.toFixed(2);
+    }
+    canvas.dataset.layout = compact ? 'compact' : 'desktop';
     width = innerWidth; height = innerHeight; headerHeight = document.querySelector('.site-header')?.offsetHeight || (width <= 760 ? 72 : 88); setResolution(); draw(performance.now(), 16.67);
   }
   function queueLayout() {
@@ -575,7 +590,7 @@
     params.cx = width * .5; params.cy = height * .5;
     params.scale = 1; fitActor(scene, state.art);
     params.opacity = state.opacity;
-    params.drawCount = Math.max(1, Math.floor(count * quality)); params.density = 1;
+    params.drawCount = Math.max(1, Math.floor((compact ? 2200 : count) * quality)); params.density = 1;
     params.actorOpacity = state.art && !['scatter', 'ambient'].includes(scene.shape) ? 1 : 0;
     renderer();
     if (!artReady) { artReady = true; document.documentElement.dataset.artReady = 'true'; }
@@ -604,6 +619,7 @@
   document.documentElement.addEventListener('pointerleave', () => { pointerOn = false; });
   addEventListener('scroll', () => { if (reduced.matches) draw(performance.now(), 16.67); }, { passive: true });
   addEventListener('resize', queueLayout, { passive: true });
+  smallScreen.addEventListener('change', queueLayout); coarsePointer.addEventListener('change', queueLayout);
   document.addEventListener('visibilitychange', restart); reduced.addEventListener('change', restart);
   document.addEventListener('eden:storylayout', () => { if (reduced.matches) draw(performance.now(), 16.67); });
   bindContextEvents(); init();

@@ -3,6 +3,7 @@
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const compact = matchMedia('(max-width: 760px), (max-width: 1100px) and (pointer: coarse)');
   const header = $('.site-header');
   const menuButton = $('.mobile-menu-button');
   const menu = $('#navMiddle');
@@ -28,8 +29,11 @@
     const item = chapterBounds[index], next = chapterBounds[index + 1];
     const entering = index === 0 ? 1 : ease(limit((scroll - item.boundary) / (viewport * .20)));
     const leaving = next ? 1 - ease(limit((scroll - next.boundary + viewport * .12) / (viewport * .12))) : 1;
-    const opacity = reduced.matches ? 1 : Math.min(entering, leaving);
-    const offsetY = reduced.matches ? 0 : (1 - entering) * 24 - (1 - leaving) * 24;
+    // Stacked chapters are taller than the viewport. Their text and controls
+    // must remain readable until they have actually left the screen.
+    const continuous = reduced.matches || compact.matches;
+    const opacity = continuous ? 1 : Math.min(entering, leaving);
+    const offsetY = continuous ? 0 : (1 - entering) * 24 - (1 - leaving) * 24;
     return { index, section: item.section, scene: item.section.dataset.scene,
       boundary: item.boundary, nextBoundary: next?.boundary ?? Infinity,
       gate: opacity, opacity, offsetY,
@@ -40,6 +44,18 @@
   }
   function readStory(scroll = scrollY) {
     if (!chapterBounds.length) return null;
+    if (compact.matches) {
+      // The artwork follows its own document slot, even when the next
+      // chapter's title is already visible in a tall phone viewport.
+      let visibleArt = -1, largestArea = 0;
+      chapterBounds.forEach((item, index) => {
+        if (!item.art) return;
+        const top = item.art.y - item.art.height / 2 - scroll;
+        const area = Math.max(0, Math.min(viewport, top + item.art.height) - Math.max(0, top));
+        if (area > largestArea) { largestArea = area; visibleArt = index; }
+      });
+      if (visibleArt !== -1) return stateFor(visibleArt, scroll);
+    }
     let index = 0;
     while (index < chapterBounds.length - 1 && scroll >= chapterBounds[index + 1].boundary) index++;
     return stateFor(index, scroll);
@@ -97,7 +113,7 @@
           width: slot.width, height: slot.height } : null,
         opacity: null, y: null, hidden: null };
     });
-    if (!reduced.matches) groups.forEach(group => group.classList.add('is-choreographed'));
+    if (!reduced.matches && !compact.matches) groups.forEach(group => group.classList.add('is-choreographed'));
     lastScroll = NaN; syncStory();
     document.dispatchEvent(new Event('eden:storylayout'));
   }
@@ -117,6 +133,7 @@
   }, { passive: true });
   document.addEventListener('visibilitychange', queuePanels);
   reduced.addEventListener('change', queuePanelLayout);
+  compact.addEventListener('change', queuePanelLayout);
   if ('ResizeObserver' in window) {
     const layout = new ResizeObserver(queuePanelLayout);
     chapters.forEach(section => layout.observe(section));
@@ -137,7 +154,7 @@
   });
   $('#serviceDeck').classList.add('is-enhanced');
   let currentService = 0;
-  function showService(index) {
+  function showService(index, navigate = false) {
     const focusedControl = controls.contains(document.activeElement) ? document.activeElement : null;
     currentService = (index + cards.length) % cards.length;
     navigationSlots[currentService].append(controls);
@@ -147,10 +164,16 @@
     });
     $('#serviceCounter').textContent = `${String(currentService + 1).padStart(2, '0')} / ${String(cards.length).padStart(2, '0')}`;
     if (focusedControl) focusedControl.focus({ preventScroll: true });
+    if (navigate && compact.matches) {
+      // A phone shows one complete service at a time. Start the new card at
+      // its heading instead of leaving the reader halfway down its list.
+      const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+      window.edenScroll.scrollTo(carousel.getBoundingClientRect().top + scrollY - padding - 16);
+    }
   }
   controls.hidden = false;
-  $('#servicePrevious').addEventListener('click', () => showService(currentService - 1));
-  $('#serviceNext').addEventListener('click', () => showService(currentService + 1));
+  $('#servicePrevious').addEventListener('click', () => showService(currentService - 1, true));
+  $('#serviceNext').addEventListener('click', () => showService(currentService + 1, true));
   carousel.addEventListener('keydown', event => {
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
       event.preventDefault();

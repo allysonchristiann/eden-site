@@ -226,22 +226,39 @@ html[data-art-ready="true"] .story-art .art-fallback { visibility: hidden; }
   .story-composition, #metodo .story-composition { gap: 5vw; }
 }
 @media (max-width: 760px) {
-  .story-section, .hero, .story-chaos, .final-section { display: block; min-height: 0; padding: 112px 24px 84px; }
-  .story-composition, #metodo .story-composition, .solutions-section .story-composition { display: flex; flex-direction: column; gap: 0; align-items: stretch; }
-  #inicio .story-panel, #metodo .story-panel, #conversar .story-panel { display: contents; }
-  #inicio .story-panel > *, #metodo .story-panel > *, #conversar .story-panel > * { order: 3; }
-  #inicio .story-panel > .eyebrow, #metodo .story-panel > .eyebrow, #conversar .story-panel > .eyebrow { order: 0; }
-  #inicio .story-panel > h1, #metodo .story-panel > h2, #conversar .story-panel > h2 { order: 1; }
-  .story-composition > .story-art, #metodo .story-art, #conversar .story-art { order: 2; height: 240px; margin: 0 0 28px; }
-  #inicio .story-art { height: 270px; }
-  #metodo .story-art { height: 220px; }
-  #inicio h1 { font-size: clamp(66px, 16vw, 100px); }
-  #metodo h2 { font-size: clamp(48px, 11.8vw, 76px); }
-  #conversar h2 { font-size: clamp(56px, 13.6vw, 90px); }
-  .story-panel .button, .story-panel .text-link { align-self: flex-start; }
-  .solutions-section .service-carousel { margin-top: 46px; }
+  .site-header { background: #000000ed; border-bottom: 1px solid #ffffff12; }
+  .nav-shell { width: calc(100% - 40px); gap: 12px; }
+  .nav-actions { gap: 8px; }
+  .mobile-menu-button { width: 44px; height: 44px; align-items: center; flex-shrink: 0; }
+  .nav-cta { min-height: 44px; }
+  .nav-middle { top: 72px; padding: 16px 20px; gap: 12px; justify-content: space-between; }
+  .nav-middle a { display: flex; align-items: center; min-height: 44px; padding: 0 8px; font-size: 11px; }
+  .story-section, .hero, .story-chaos, .final-section { display: block; min-height: 0; padding: 72px 24px; }
+  .hero { padding-top: 112px; padding-bottom: 56px; }
+  /* Keep each copy block intact, in the same reading order as desktop. */
+  .story-composition, #metodo .story-composition, .solutions-section .story-composition { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; max-width: 560px; margin: auto; }
+  .story-composition > .story-panel { min-width: 0; }
+  .story-composition > .story-art, #metodo .story-art, #conversar .story-art { grid-column: 1; grid-row: auto; height: clamp(220px, 64vw, 340px); max-width: 400px; margin: 0 auto; }
+  #metodo .story-panel { grid-column: 1; grid-row: auto; }
+  /* The opening keeps the desktop's title-and-bulb silhouette. Only the
+     supporting copy spans the narrower screen below that shared first row. */
+  #inicio .story-composition { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); column-gap: 16px; row-gap: 0; }
+  #inicio .hero-copy { display: contents; }
+  #inicio h1 { grid-column: 1; grid-row: 1; font-size: clamp(48px, 14vw, 80px); margin-bottom: 0; }
+  #inicio .story-art { grid-column: 2; grid-row: 1; height: clamp(210px, 56vw, 300px); margin-bottom: 0; }
+  #inicio .hero-copy > :not(h1) { grid-column: 1 / -1; }
+  #inicio .hero-eyebrow { margin-top: 24px; }
+  #inicio .hero-copy .button { justify-self: start; }
+  #metodo h2, .solutions-intro h2 { font-size: clamp(42px, 11vw, 68px); }
+  #conversar h2 { font-size: clamp(42px, 12vw, 72px); }
+  .story-statement h2 { font-size: clamp(30px, 8vw, 48px); line-height: 1.12; }
+  .body-copy, .story-statement .body-copy, .final-copy .body-copy { font-size: 17px; line-height: 1.55; }
+  .story-panel .button { min-height: 48px; }
+  .story-panel .text-link { min-height: 44px; }
+  .solutions-section .service-carousel { margin: 0; }
+  .service-card h3 { font-size: clamp(28px, 8vw, 36px); }
   .story-center .story-composition { display: block; }
-  .scroll-cue { bottom: 22px; }
+  .scroll-cue { position: static; transform: none; justify-content: center; margin-top: 28px; min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .story-composition.is-choreographed { opacity: 1; transform: none; }
@@ -253,12 +270,6 @@ html[data-art-ready="true"] .story-art .art-fallback { visibility: hidden; }
 .service-deck.is-enhanced > .service-card { grid-area: 1 / 1; min-width: 0; }
 .service-deck.is-enhanced > .service-card[hidden] { display: block !important; visibility: hidden; pointer-events: none; }
 .service-card li { font-size: 13px; }
-/* Cached mobile artwork inherits exactly the copy's opacity and scroll position. */
-.mobile-particle-art { display: block; position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-html.mobile-motion [data-art-slot] .art-fallback { visibility: visible; }
-html.mobile-motion [data-mobile-art-ready] .art-fallback { visibility: hidden; }
-html.mobile-motion .mobile-logo-vector .art-fallback { visibility: visible; opacity: 1; }
-
 /* The reading surface shields complete service descriptions from the field.
    Navigation lives in the active card, immediately after its contact link. */
 .service-carousel { padding: 0; border: 0; background: none; }
@@ -278,4 +289,6 @@ html.mobile-motion .mobile-logo-vector .art-fallback { visibility: visible; opac
 @media (max-width: 760px) {
   .carousel-heading { padding: 20px 20px 16px; }
   .service-deck.is-enhanced > .service-card { padding: 24px 20px 22px; }
+  /* Reserve only the active service's height on a narrow reading surface. */
+  .service-deck.is-enhanced > .service-card[hidden] { display: none !important; }
 }
